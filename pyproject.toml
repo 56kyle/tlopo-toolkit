@@ -25,9 +25,9 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "pyscreeze>=1.0.1",
     "python-dotenv>=1.1.1",
+    "pywinctl>=0.4.1",
     "typer>=0.15.4",
     "typing-extensions>=4.13.2",
-    "window-input>=1.7",
 ]
 
 [dependency-groups]
