@@ -1,23 +1,15 @@
 """Module containing logic for interacting with the potion brewing minigame's interface."""
-from pathlib import Path
-from typing import Iterable
 
+import cv2
 import numpy as np
-import pyscreeze
-import win32con
 import win32gui
-import win32ui
 from PIL import Image
 from window_input import Window
 
-import cv2
-
-from tlopo_toolkit.geometry import Layout
 from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
 from tlopo_toolkit.potion_brewing.board import draw_bounding_box
 from tlopo_toolkit.potion_brewing.board import show
-from tlopo_toolkit.util import find_window_by_title
 from tlopo_toolkit.util import screenshot_window
 
 
@@ -74,7 +66,7 @@ def get_minigame_area() -> Image:
 
 def get_board_area() -> Image:
     """Returns the play area relative to the window client."""
-    minigame_area: Image = get_minigame_area()
+    get_minigame_area()
 
 
 def blur_relative_to_size(img: np.ndarray, size: int) -> np.ndarray:

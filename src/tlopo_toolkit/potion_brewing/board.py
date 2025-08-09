@@ -1,9 +1,6 @@
 """Module containing logic for interacting with the potion brewing minigame's board."""
 from dataclasses import dataclass
-from enum import Enum
-from functools import cached_property
 from pathlib import Path
-from typing import ClassVar
 from typing import Literal
 from typing import NamedTuple
 from typing import Union
@@ -15,8 +12,6 @@ from PIL.Image import Image
 from tlopo_toolkit.constants import REPO_FOLDER
 from tlopo_toolkit.geometry import Hex
 from tlopo_toolkit.geometry import Layout
-from tlopo_toolkit.geometry import OffsetCoord
-from tlopo_toolkit.geometry import Orientation
 from tlopo_toolkit.geometry import Rect
 
 
@@ -56,8 +51,7 @@ def get_contours(img: np.ndarray):
     # Find contours
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    return contours
+    return sorted(contours, key=cv2.contourArea, reverse=True)
 
 
 def draw_bounding_box(img: np.ndarray, rect: Rect) -> np.ndarray:
@@ -76,7 +70,7 @@ class Board:
 
 
 def get_board_from_image(img: Union[Image, np.ndarray]) -> Board:
-    bgr: np.ndarray = _as_cv_img(img=img)
+    _as_cv_img(img=img)
 
 
 def _as_cv_img(img: Union[Image, np.ndarray]) -> np.ndarray:

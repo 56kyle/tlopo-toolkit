@@ -1,10 +1,13 @@
+from contextlib import contextmanager
+from contextlib import suppress
+from typing import Optional
+from typing import Tuple
+
+import numpy as np
+import win32con
 import win32gui
 import win32ui
-import win32con
 from PIL import Image
-import numpy as np
-from typing import Optional, Tuple
-from contextlib import contextmanager
 
 
 def find_window_by_title(title: str) -> Optional[int]:
@@ -70,10 +73,8 @@ def memory_dc_context(width: int, height: int):
             lambda: win32gui.ReleaseDC(0, screen_dc) if screen_dc else None
         ]
         for cleanup in cleanup_actions:
-            try:
+            with suppress(Exception):
                 cleanup()
-            except:
-                pass
 
 
 def try_print_window_capture(hwnd: int, dc_handle: int) -> bool:
@@ -91,7 +92,7 @@ def try_legacy_bitblt_capture(hwnd: int, memory_dc, width: int, height: int) -> 
         # Get client area DC instead of window DC
         hwnd_dc = win32gui.GetDC(hwnd)  # Client area only
         if hwnd_dc:
-            result = memory_dc.BitBlt(
+            memory_dc.BitBlt(
                 (0, 0), (width, height),
                 win32ui.CreateDCFromHandle(hwnd_dc), (0, 0), win32con.SRCCOPY
             )

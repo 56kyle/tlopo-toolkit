@@ -1,19 +1,13 @@
 import math
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import Annotated
-from typing import Any
 from typing import ClassVar
 from typing import Generic
 from typing import Literal
 from typing import NamedTuple
-from typing import Type
 from typing import TypeVar
 
 from typing_extensions import Self
 
-from pydantic import AfterValidator
-from pydantic import BaseModel
 
 T: TypeVar = TypeVar("T")
 
@@ -124,9 +118,9 @@ def hex_distance(a: Hex, b: Hex) -> int:
 
 
 def hex_round(h: _Hex) -> Hex:
-    qi: int = int(round(h.q))
-    ri: int = int(round(h.r))
-    si: int = int(round(h.s))
+    qi: int = round(h.q)
+    ri: int = round(h.r)
+    si: int = round(h.s)
     q_diff: int = abs(qi - h.q)
     r_diff: int = abs(ri - h.r)
     s_diff: int = abs(si - h.s)
@@ -254,7 +248,7 @@ def rdoubled_to_cube(h: DoubledCoord) -> Hex:
 
 @dataclass(frozen=True)
 class Orientation:
-    __slots__: ClassVar[list[str]] = ["f0", "f1", "f2", "f3", "b0", "b1", "b2", "b3", "start_angle"]
+    __slots__: ClassVar[list[str]] = ["b0", "b1", "b2", "b3", "f0", "f1", "f2", "f3", "start_angle"]
 
     f0: float
     f1: float
@@ -269,7 +263,7 @@ class Orientation:
 
 @dataclass(frozen=True)
 class Layout:
-    __slots__: ClassVar[list[str]] = ["orientation", "size", "origin"]
+    __slots__: ClassVar[list[str]] = ["orientation", "origin", "size"]
 
     orientation: Orientation
     size: Point
