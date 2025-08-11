@@ -1,5 +1,7 @@
+import subprocess
 from contextlib import contextmanager
 from contextlib import suppress
+from pathlib import Path
 from typing import Optional
 from typing import Tuple
 
@@ -8,6 +10,16 @@ import win32con
 import win32gui
 import win32ui
 from PIL import Image
+from pywinctl import getAllWindows
+from pywinctl._main import BaseWindow
+
+
+def get_window_from_pid(pid: int) -> BaseWindow:
+    """Run executable at the provided path and return its window."""
+    for window in getAllWindows():
+        if window.getPID() == pid:
+            return window
+    raise ValueError("Could not find window with given PID for the Launcher.")
 
 
 def find_window_by_title(title: str) -> Optional[int]:

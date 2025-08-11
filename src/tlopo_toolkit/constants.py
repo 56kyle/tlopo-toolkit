@@ -36,3 +36,4 @@ DEFAULT_PYDANTIC_SETTINGS_CONFIG: SettingsConfigDict = SettingsConfigDict(
 )
 
 REPO_FOLDER: Path = Path(__file__).resolve().parent.parent.parent
+ENV_FILE: Path = REPO_FOLDER / ".env"

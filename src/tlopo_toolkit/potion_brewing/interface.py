@@ -1,7 +1,9 @@
 """Module containing logic for interacting with the potion brewing minigame's interface."""
+from math import floor
 
 import cv2
 import numpy as np
+import pywinctl
 import win32gui
 from PIL import Image
 from window_input import Window
@@ -49,6 +51,9 @@ def get_scaled_reference_image(window: Window, img: np.ndarray) -> np.ndarray:
 def get_piece_slots(window: Window) -> list[Point]:
     left, top, right, bottom = win32gui.GetWindowRect(window.hwnd)
 
+
+
+
 def get_minigame_area() -> Image:
     """Returns an image of the game area."""
     img: Image = screenshot_window("The Legend of Pirates Online [BETA]")
@@ -71,7 +76,7 @@ def get_board_area() -> Image:
 
 def blur_relative_to_size(img: np.ndarray, size: int) -> np.ndarray:
     """Blurs the image based on the resolution of the given image."""
-    kernel_scale: int = 20 / (size / 100)
+    kernel_scale: int = size
     if size < 200:
         print(200)
         kernel_scale: int = 5
@@ -87,17 +92,23 @@ def blur_relative_to_size(img: np.ndarray, size: int) -> np.ndarray:
 
 
 
-def find_board_range_x(bottom_half_section):
+
+def find_board_range_x(bottom_half_section, ratio):
     """Use the bottom half of the image to find horizontal bounds using most common x coordinate."""
     h: int
     w: int
     h, w = bottom_half_section.shape[:2]
     gray: np.ndarray = cv2.cvtColor(bottom_half_section, cv2.COLOR_BGR2GRAY)
 
+    kernel_size: int = floor(19 * ratio)
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    kernel: tuple[int, int] = (kernel_size, kernel_size)
+
     # Use larger kernel size for much better edge detection
-    blurred: np.ndarray = blur_relative_to_size(gray, w)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, kernel, 0)
     show(blurred)
-    edges: np.ndarray = cv2.Canny(blurred, 50, 120)
+    edges: np.ndarray = cv2.Canny(blurred, floor(50 * ratio), floor(120 * ratio))
     show(edges)
 
     # Sum edge pixels along each column to get x-coordinate counts
@@ -117,17 +128,22 @@ def find_board_range_x(bottom_half_section):
     return dxi, dxf
 
 
-def find_board_range_y(board_right_section):
+def find_board_range_y(board_right_section, ratio):
     """Use the right edge of the board area to find vertical bounds."""
     h: int
     w: int
     h, w = board_right_section.shape[:2]
     gray: np.ndarray = cv2.cvtColor(board_right_section, cv2.COLOR_BGR2GRAY)
 
+    kernel_size: int = floor(19 * ratio)
+    if kernel_size % 2 == 0:
+        kernel_size += 1
+    kernel: tuple[int, int] = (kernel_size, kernel_size)
+
     # Use larger kernel size for much better edge detection
-    blurred: np.ndarray = blur_relative_to_size(gray, h)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, kernel, 0)
     show(blurred)
-    edges: np.ndarray = cv2.Canny(blurred, 50, 120)
+    edges: np.ndarray = cv2.Canny(blurred, floor(50 * ratio), floor(120 * ratio))
     show(edges)
 
     # Sum edge pixels along each column to get x-coordinate counts
@@ -167,9 +183,11 @@ def crop_hexagonal_board(pil_image):
     board_area_start: int = int(w * 0.75)
     board_right_section: np.ndarray = img[:, board_area_start:]
 
+    ratio: float = (w / 1350)
+
     # Find the board boundaries
-    board_left, board_right = find_board_range_x(bottom_half_section)
-    board_top, board_bottom = find_board_range_y(board_right_section)
+    board_left, board_right = find_board_range_x(bottom_half_section, ratio)
+    board_top, board_bottom = find_board_range_y(board_right_section, ratio)
 
     # Adjust coordinates back to full image
     board_left += width_half_start
@@ -187,6 +205,7 @@ def crop_hexagonal_board(pil_image):
     # Convert back to PIL
     cropped_rgb: np.ndarray = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
     return Image.fromarray(cropped_rgb)
+
 
 
 if __name__ == "__main__":

@@ -1,10 +1,25 @@
 """Module containing logic for interacting with a particular instance of TLOPO."""
-
+import multiprocessing
+import subprocess
+from contextlib import contextmanager
 from dataclasses import dataclass
+from pathlib import Path
+from typing import ClassVar
+from typing import Generator
 
+from _win32typing import PyHANDLE
 from keyring import get_password
+from pywinctl import getAllWindows
+from pywinctl._main import BaseWindow
 from typing_extensions import Self
-from window_input import Window
+
+from tlopo_toolkit.application import Application
+from tlopo_toolkit.config import Config
+from tlopo_toolkit.config import load_config
+from tlopo_toolkit.util import get_window_from_pid
+
+
+config: Config = load_config()
 
 
 @dataclass(frozen=True)
@@ -46,19 +61,15 @@ class Server:
 
 
 @dataclass(frozen=True)
-class Client:
+class Client(Application):
     """Class representing a particular instance of TLOPO."""
-
-    window: Window
     account: Account
 
 
 @dataclass(frozen=True)
-class Launcher:
+class Launcher(Application):
     """Class representing a particular instance of TLOPO's launcher."""
 
-    pid: int
-    window: Window
 
 
 @dataclass(frozen=True)

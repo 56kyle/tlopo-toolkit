@@ -79,7 +79,6 @@ def _as_cv_img(img: Union[Image, np.ndarray]) -> np.ndarray:
     return bgr_img
 
 
-
 def show(img: np.ndarray) -> None:
     """Shows the given image."""
     cv2.imshow("img", img)
