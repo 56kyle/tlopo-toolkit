@@ -1,11 +1,14 @@
 import math
 from dataclasses import dataclass
+from functools import cached_property
 from typing import ClassVar
 from typing import Generic
 from typing import Literal
 from typing import NamedTuple
 from typing import TypeVar
+from typing import Union
 
+import numpy as np
 from typing_extensions import Self
 
 
@@ -20,17 +23,69 @@ class Point:
     y: float
 
 
-class Rect(NamedTuple):
-    """Represents a rectangle on the board."""
+@dataclass(frozen=True)
+class Rect:
+    """Represents a Rectangle."""
+
     x: int
     y: int
     w: int
     h: int
 
+    __slots__: ClassVar[list[str]] = ["x", "y", "w", "h"]
+
+    @cached_property
+    def left(self):
+        return self.x
+
+    @cached_property
+    def top(self) -> int:
+        return self.y
+
+    @cached_property
+    def right(self) -> int:
+        return self.x + self.w
+
+    @cached_property
+    def bottom(self) -> int:
+        return self.y + self.h
+
+
+@dataclass(frozen=True)
+class Region:
+    """Represents a Rectangle Region in a larger image."""
+
+    image: np.ndarray
+    rect: Rect
+
+    __slots__: ClassVar[list[str]] = ["image", "rect"]
+
+    def crop_absolute(self, rect: Rect) -> Self:
+        """Crops the internal region relative to the image."""
+        return Region(image=self.image, rect=rect)
+
+    def crop_relative(self, rect: Rect) -> Self:
+        """Crops the internal region to itself."""
+
+        return Region(
+            image=self.image,
+            rect=Rect(
+                x=self.rect.x + rect.x,
+                y=self.rect.y + rect.y,
+                w=rect.w,
+                h=rect.h,
+            ),
+        )
+
+    def export(self) -> np.ndarray:
+        """Exports the internal region as a numpy array."""
+        return self.image[self.rect.top : self.rect.bottom, self.rect.left : self.rect.right]
+
 
 @dataclass(frozen=True)
 class _Hex(Generic[T]):
     """Represents a hexagon coordinate."""
+
     __slots__: ClassVar[tuple[str, str, str]] = ("q", "r", "s")
 
     q: T
@@ -57,7 +112,6 @@ class Hex(_Hex[int]):
 
     def __sub__(self, other: Self) -> Self:
         return Hex(self.q - other.q, self.r - other.r, self.s - other.s)
-
 
 
 @dataclass(frozen=True)
@@ -219,7 +273,6 @@ def roffset_to_rdoubled(offset: Literal[-1, 1], h: OffsetCoord) -> DoubledCoord:
     return DoubledCoord(2 * h.col - offset * parity, h.row)
 
 
-
 def qdoubled_from_cube(h: Hex) -> DoubledCoord:
     col: int = h.q
     row: int = 2 * h.r + h.q
@@ -271,26 +324,10 @@ class Layout:
 
 
 ORIENTATION_POINTY: Orientation = Orientation(
-    math.sqrt(3.0),
-    math.sqrt(3.0) / 2.0,
-    0.0,
-    3.0 / 2.0,
-    math.sqrt(3.0) / 3.0,
-    -1.0 / 3.0,
-    0.0,
-    2.0 / 3.0,
-    0.5
+    math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5
 )
 ORIENTATION_FLAT: Orientation = Orientation(
-    3.0 / 2.0,
-    0.0,
-    math.sqrt(3.0) / 2.0,
-    math.sqrt(3.0),
-    2.0 / 3.0,
-    0.0,
-    -1.0 / 3.0,
-    math.sqrt(3.0) / 3.0,
-    0.0
+    3.0 / 2.0, 0.0, math.sqrt(3.0) / 2.0, math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, math.sqrt(3.0) / 3.0, 0.0
 )
 
 
@@ -331,3 +368,8 @@ def polygon_corners(layout: Layout, h: Hex) -> list[Point]:
         offset = hex_corner_offset(layout, i)
         corners.append(Point(center.x + offset.x, center.y + offset.y))
     return corners
+
+
+if __name__ == "__main__":
+    for foo in Point(1, 2):
+        print(foo)

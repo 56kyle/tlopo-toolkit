@@ -1,4 +1,5 @@
 """Module containing logic for interacting with the potion brewing minigame's interface."""
+
 from math import floor
 
 import cv2
@@ -10,22 +11,18 @@ from window_input import Window
 
 from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
+from tlopo_toolkit.geometry import Region
 from tlopo_toolkit.potion_brewing.board import draw_bounding_box
 from tlopo_toolkit.potion_brewing.board import show
-from tlopo_toolkit.util import screenshot_window
+from tlopo_toolkit.util import get_client_dimensions
+from tlopo_toolkit.util import get_client_rect
+from tlopo_toolkit.util import screenshot_window_from_title
 
 
 PIECE_WINDOW_WIDTH_RATIO: float = 91 / 1936
 PIECE_WINDOW_HEIGHT_RATIO: float = 81 / 1056
 
 PLAY_AREA_OFFSET_RATIO_OF_HALF: float = 66 / 678
-
-
-
-
-def get_play_area_from_image(img: Image) -> None:
-    """Returns the play area box coordinates."""
-
 
 
 def exit_minigame() -> None:
@@ -52,11 +49,9 @@ def get_piece_slots(window: Window) -> list[Point]:
     left, top, right, bottom = win32gui.GetWindowRect(window.hwnd)
 
 
-
-
 def get_minigame_area() -> Image:
     """Returns an image of the game area."""
-    img: Image = screenshot_window("The Legend of Pirates Online [BETA]")
+    img: Image = screenshot_window_from_title("The Legend of Pirates Online [BETA]")
     img_arr: np.ndarray = np.array(img)
 
     y_half: int = img.size[1] // 2
@@ -89,8 +84,6 @@ def blur_relative_to_size(img: np.ndarray, size: int) -> np.ndarray:
     else:
         kernel_scale: int = 19
     return cv2.GaussianBlur(img, (kernel_scale, kernel_scale), 0)
-
-
 
 
 def find_board_range_x(bottom_half_section, ratio):
@@ -183,7 +176,7 @@ def crop_hexagonal_board(pil_image):
     board_area_start: int = int(w * 0.75)
     board_right_section: np.ndarray = img[:, board_area_start:]
 
-    ratio: float = (w / 1350)
+    ratio: float = w / 1350
 
     # Find the board boundaries
     board_left, board_right = find_board_range_x(bottom_half_section, ratio)
@@ -200,16 +193,20 @@ def crop_hexagonal_board(pil_image):
     crop_h: int = min(h - crop_y, board_bottom - board_top)
     show(draw_bounding_box(img, Rect(crop_x, crop_y, crop_w, crop_h)))
 
-    cropped: np.ndarray = img[crop_y:crop_y + crop_h, crop_x:crop_x + crop_w]
+    cropped: np.ndarray = img[crop_y : crop_y + crop_h, crop_x : crop_x + crop_w]
 
     # Convert back to PIL
     cropped_rgb: np.ndarray = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
     return Image.fromarray(cropped_rgb)
 
 
+def get_minigame_region(window: Window) -> None:
+    """Returns the region of the screen corresponding to the potion brewing minigame."""
+    get_minigame_area
+
 
 if __name__ == "__main__":
-    #img: Image = screenshot_window("The Legend of Pirates Online [BETA]")
+    # img: Image = screenshot_window_from_title("The Legend of Pirates Online [BETA]")
     img: Image = get_minigame_area()
     img_arr: np.ndarray = np.array(img)
 
@@ -229,7 +226,6 @@ if __name__ == "__main__":
     #     for yi in range(img.size[1]):
     #         img.putpixel((x, yi), (255, 0, 0))
     # img.show()
-
 
     # window: Window = Window(hwnd="The Legend of Pirates Online [BETA]")
     # path: Path = Path(r"C:\Users\56kyl\source\repos\tlopo-toolkit\data\example.PNG")
@@ -255,5 +251,3 @@ if __name__ == "__main__":
     # contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # output = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
     # show(output)
-
-

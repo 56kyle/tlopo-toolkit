@@ -4,6 +4,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import numpy as np
 import win32con
@@ -12,6 +13,9 @@ import win32ui
 from PIL import Image
 from pywinctl import getAllWindows
 from pywinctl._main import BaseWindow
+
+from tlopo_toolkit.geometry import Rect
+from tlopo_toolkit.geometry import Region
 
 
 def get_window_from_pid(pid: int) -> BaseWindow:
@@ -43,6 +47,42 @@ def get_client_dimensions(hwnd: int) -> Tuple[int, int]:
         return max(0, width), max(0, height)
     except:
         return 0, 0
+
+
+def get_brewing_minigame_region(hwnd: int) -> Region:
+    """Returns the brewing minigame region."""
+    client_region: Region = get_client_region(hwnd=hwnd)
+    half_height: int = client_region.rect.h // 2
+
+    row_sums: np.ndarray = client_region.image[half_height].sum(axis=1)
+
+    midpoint: int = len(row_sums) // 2
+    left_bar_width: int = sum(np.array(row_sums[:midpoint] == 0))
+    right_bar_width: int = sum(np.array(row_sums[midpoint:] == 0))
+
+    new_rect: Rect = Rect(x=left_bar_width, y=0, w=client_region.rect.w - right_bar_width, h=client_region.rect.h)
+    return client_region.crop_absolute(rect=new_rect)
+
+
+def get_client_region(hwnd: int) -> Region:
+    """Returns the client Region."""
+    client_img: np.ndarray = get_client_image(hwnd=hwnd)
+    client_rect: Rect = get_client_rect(hwnd=hwnd)
+    return Region(image=client_img, rect=client_rect)
+
+
+def get_client_image(hwnd: int) -> np.ndarray:
+    """Returns the client image."""
+    client_img: Optional[np.ndarray] = screenshot_window(hwnd=hwnd)
+    if client_img is None:
+        raise ValueError("Could not capture client image.")
+    return client_img
+
+
+def get_client_rect(hwnd: int) -> Rect:
+    """Returns the client Rect."""
+    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    return Rect(left, top, right - left, bottom - top)
 
 
 def array_to_image(bitmap_data: bytes, width: int, height: int) -> Optional[Image.Image]:
@@ -82,7 +122,7 @@ def memory_dc_context(width: int, height: int):
         cleanup_actions = [
             lambda: win32gui.DeleteObject(bitmap.GetHandle()) if bitmap else None,
             lambda: memory_dc.DeleteDC() if memory_dc else None,
-            lambda: win32gui.ReleaseDC(0, screen_dc) if screen_dc else None
+            lambda: win32gui.ReleaseDC(0, screen_dc) if screen_dc else None,
         ]
         for cleanup in cleanup_actions:
             with suppress(Exception):
@@ -104,10 +144,7 @@ def try_legacy_bitblt_capture(hwnd: int, memory_dc, width: int, height: int) -> 
         # Get client area DC instead of window DC
         hwnd_dc = win32gui.GetDC(hwnd)  # Client area only
         if hwnd_dc:
-            memory_dc.BitBlt(
-                (0, 0), (width, height),
-                win32ui.CreateDCFromHandle(hwnd_dc), (0, 0), win32con.SRCCOPY
-            )
+            memory_dc.BitBlt((0, 0), (width, height), win32ui.CreateDCFromHandle(hwnd_dc), (0, 0), win32con.SRCCOPY)
             win32gui.ReleaseDC(hwnd, hwnd_dc)
             return True
         return False
@@ -132,12 +169,15 @@ def is_bitmap_valid(bitmap_data: bytes, width: int, height: int) -> bool:
         return False
 
 
-def screenshot_window(window_title: str) -> Optional[Image.Image]:
+def screenshot_window_from_title(window_title: str) -> Optional[Image.Image]:
     """Capture complete window client area including offscreen content."""
-    hwnd = find_window_by_title(window_title)
+    hwnd: int = find_window_by_title(window_title)
     if not hwnd or not win32gui.IsWindow(hwnd):
         return None
+    return screenshot_window(hwnd)
 
+
+def screenshot_window(hwnd: int) -> Optional[Image.Image]:
     width, height = get_client_dimensions(hwnd)
     if width <= 0 or height <= 0:
         return None
