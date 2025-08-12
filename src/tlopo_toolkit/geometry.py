@@ -8,6 +8,7 @@ from typing import NamedTuple
 from typing import TypeVar
 from typing import Union
 
+import cv2
 import numpy as np
 from typing_extensions import Self
 
@@ -34,19 +35,19 @@ class Rect:
 
     __slots__: ClassVar[list[str]] = ["x", "y", "w", "h"]
 
-    @cached_property
+    @property
     def left(self):
         return self.x
 
-    @cached_property
+    @property
     def top(self) -> int:
         return self.y
 
-    @cached_property
+    @property
     def right(self) -> int:
         return self.x + self.w
 
-    @cached_property
+    @property
     def bottom(self) -> int:
         return self.y + self.h
 
@@ -80,6 +81,18 @@ class Region:
     def export(self) -> np.ndarray:
         """Exports the internal region as a numpy array."""
         return self.image[self.rect.top : self.rect.bottom, self.rect.left : self.rect.right]
+
+    def show(self) -> None:
+        new_img: np.ndarray = np.copy(self.image)
+        if len(new_img.shape) == 2:
+            new_img = cv2.cvtColor(new_img, cv2.COLOR_GRAY2BGR)
+
+        rect_img: np.ndarray = cv2.rectangle(
+            new_img, (self.rect.x, self.rect.y), (self.rect.right, self.rect.bottom), (0, 255, 0), 3
+        )
+        cv2.imshow("img", rect_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 @dataclass(frozen=True)
@@ -368,8 +381,3 @@ def polygon_corners(layout: Layout, h: Hex) -> list[Point]:
         offset = hex_corner_offset(layout, i)
         corners.append(Point(center.x + offset.x, center.y + offset.y))
     return corners
-
-
-if __name__ == "__main__":
-    for foo in Point(1, 2):
-        print(foo)

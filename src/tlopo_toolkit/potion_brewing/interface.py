@@ -5,13 +5,13 @@ from math import floor
 import cv2
 import numpy as np
 import pywinctl
+import shapely
 import win32gui
 from PIL import Image
 from window_input import Window
 
 from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
-from tlopo_toolkit.geometry import Region
 from tlopo_toolkit.potion_brewing.board import draw_bounding_box
 from tlopo_toolkit.potion_brewing.board import show
 from tlopo_toolkit.util import get_client_dimensions
@@ -198,11 +198,6 @@ def crop_hexagonal_board(pil_image):
     # Convert back to PIL
     cropped_rgb: np.ndarray = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
     return Image.fromarray(cropped_rgb)
-
-
-def get_minigame_region(window: Window) -> None:
-    """Returns the region of the screen corresponding to the potion brewing minigame."""
-    get_minigame_area
 
 
 if __name__ == "__main__":
