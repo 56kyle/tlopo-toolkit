@@ -58,6 +58,7 @@ def get_brewing_board_region(hwnd: int) -> Region:
     gray_minigame_region: Region = _get_gray_minigame_region(minigame_region=brewing_minigame_region)
     blurred_minigame_region: Region = _get_blurred_minigame_region(minigame_region=gray_minigame_region)
     edged_minigame_region: Region = _get_edged_minigame_region(minigame_region=blurred_minigame_region)
+    edged_minigame_region.show()
 
     bottom_edge_region: Region = _get_bottom_edge_region(edged_minigame_region=edged_minigame_region)
     right_edge_region: Region = _get_right_edge_region(edged_minigame_region=edged_minigame_region)
@@ -68,26 +69,37 @@ def get_brewing_board_region(hwnd: int) -> Region:
     dyf_inner: int = __find_brewing_board_bottom_edge_offset(right_edge=right_edge_region)
 
     dx_inner: int = dxf_inner - dxi_inner
-    dx_hex_outer: float = dx_inner / 5.75
+    dx_hex_outer: float = 0 * dx_inner / 5.75
 
-    dxi: int = round(dxi_inner - dx_hex_outer)
-    dxf: int = round(dxf_inner + dx_hex_outer)
+    dxi: int = round(dxi_inner)
+    dxf: int = round(dxf_inner + (dx_hex_outer / 4))
 
-    xi: int = bottom_edge_region.rect.x + dxi
-    xf: int = bottom_edge_region.rect.x + dxf
+    # Convert bottom_edge offsets to brewing_minigame_region coordinate system
+    # bottom_edge starts at (w_half, y_half) within edged_minigame_region
+    # The offsets dxi, dxf are already relative to the bottom_edge start position
+    bottom_edge_start_x = brewing_minigame_region.rect.w // 2
+    xi: int = brewing_minigame_region.rect.x + bottom_edge_start_x + dxi
+    xf: int = brewing_minigame_region.rect.x + bottom_edge_start_x + dxf
 
     dy_inner: int = dyf_inner - dyi_inner
     dy_hex_inner: float = dy_inner // 19
     dyi: int = round(dyi_inner - dy_hex_inner)
-    dyf: int = round(dyf_inner + dy_hex_inner)
+    dyf: int = round(dyf_inner)
 
-    yi: int = right_edge_region.rect.y + dyi
-    yf: int = right_edge_region.rect.y + dyf
+    # Convert right_edge offsets to brewing_minigame_region coordinate system
+    # right_edge starts at (w_quarter * 3, 0) within edged_minigame_region
+    right_edge_start_y = 0
+    yi: int = brewing_minigame_region.rect.y + right_edge_start_y + dyi
+    yf: int = brewing_minigame_region.rect.y + right_edge_start_y + dyf
 
     absolute_rect: Rect = Rect(x=xi, y=yi, w=xf - xi, h=yf - yi)
     print(f"{absolute_rect=}")
 
-    board_region: Region = brewing_minigame_region.crop_absolute(rect=absolute_rect)
+    # Convert absolute coordinates to relative coordinates within brewing_minigame_region
+    relative_rect: Rect = Rect(
+        x=xi - brewing_minigame_region.rect.x, y=yi - brewing_minigame_region.rect.y, w=xf - xi, h=yf - yi
+    )
+    board_region: Region = brewing_minigame_region.crop_relative(rect=relative_rect)
     print(f"{board_region.rect=}")
     board_region.show()
 
@@ -148,25 +160,29 @@ def _get_bottom_edge_region(edged_minigame_region: Region) -> Region:
 
 def __find_brewing_board_left_edge_offset(bottom_edge: Region) -> int:
     """Find the left edge of the brewing board."""
-    x_counts: np.ndarray = bottom_edge.image.astype(bool, copy=True).sum(axis=0)
+    region_image: np.ndarray = bottom_edge.export()
+    x_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=0)
     half_width: int = bottom_edge.rect.w // 2
     return int(np.argmax(x_counts[:half_width]))
 
 
 def __find_brewing_board_right_edge_offset(bottom_edge: Region) -> int:
-    x_counts: np.ndarray = bottom_edge.image.astype(bool, copy=True).sum(axis=0)
+    region_image: np.ndarray = bottom_edge.export()
+    x_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=0)
     half_width: int = bottom_edge.rect.w // 2
     return int(np.argmax(x_counts[half_width:])) + half_width
 
 
 def __find_brewing_board_top_edge_offset(right_edge: Region) -> int:
-    y_counts: np.ndarray = right_edge.image.astype(bool, copy=True).sum(axis=1)
+    region_image: np.ndarray = right_edge.export()
+    y_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=1)
     half_height: int = right_edge.rect.h // 2
     return int(np.argmax(y_counts[:half_height]))
 
 
 def __find_brewing_board_bottom_edge_offset(right_edge: Region) -> int:
-    y_counts: np.ndarray = right_edge.image.astype(bool, copy=True).sum(axis=1)
+    region_image: np.ndarray = right_edge.export()
+    y_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=1)
     half_height: int = right_edge.rect.h // 2
     return int(np.argmax(y_counts[half_height:])) + half_height
 
@@ -184,10 +200,7 @@ def get_brewing_minigame_region(hwnd: int) -> Region:
 
     minigame_region: Region = client_region.crop_relative(
         rect=Rect(
-            x=left_bar_width,
-            y=0,
-            w=client_region.rect.w - (left_bar_width + right_bar_width),
-            h=client_region.rect.h
+            x=left_bar_width, y=0, w=client_region.rect.w - (left_bar_width + right_bar_width), h=client_region.rect.h
         )
     )
     print(f"{minigame_region.rect=}")

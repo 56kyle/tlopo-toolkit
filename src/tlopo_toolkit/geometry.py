@@ -88,7 +88,7 @@ class Region:
             new_img = cv2.cvtColor(new_img, cv2.COLOR_GRAY2BGR)
 
         rect_img: np.ndarray = cv2.rectangle(
-            new_img, (self.rect.x, self.rect.y), (self.rect.right, self.rect.bottom), (0, 255, 0), 3
+            new_img, (self.rect.x, self.rect.y), (self.rect.right, self.rect.bottom), (0, 255, 0), 1
         )
         cv2.imshow("img", rect_img)
         cv2.waitKey(0)
