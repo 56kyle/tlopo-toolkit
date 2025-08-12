@@ -60,11 +60,7 @@ def get_brewing_board_region(hwnd: int) -> Region:
     edged_minigame_region: Region = _get_edged_minigame_region(minigame_region=blurred_minigame_region)
 
     bottom_edge_region: Region = _get_bottom_edge_region(edged_minigame_region=edged_minigame_region)
-    print(f"{bottom_edge_region.rect=}")
-    bottom_edge_region.show()
     right_edge_region: Region = _get_right_edge_region(edged_minigame_region=edged_minigame_region)
-    print(f"{right_edge_region.rect=}")
-    right_edge_region.show()
 
     dxi_inner: int = __find_brewing_board_left_edge_offset(bottom_edge=bottom_edge_region)
     dxf_inner: int = __find_brewing_board_right_edge_offset(bottom_edge=bottom_edge_region)
@@ -73,20 +69,28 @@ def get_brewing_board_region(hwnd: int) -> Region:
 
     dx_inner: int = dxf_inner - dxi_inner
     dx_hex_outer: float = dx_inner / 5.75
+
     dxi: int = round(dxi_inner - dx_hex_outer)
     dxf: int = round(dxf_inner + dx_hex_outer)
 
+    xi: int = bottom_edge_region.rect.x + dxi
+    xf: int = bottom_edge_region.rect.x + dxf
+
     dy_inner: int = dyf_inner - dyi_inner
-    dy_hex_inner: float = dy_inner / 19
+    dy_hex_inner: float = dy_inner // 19
     dyi: int = round(dyi_inner - dy_hex_inner)
     dyf: int = round(dyf_inner + dy_hex_inner)
 
-    relative_rect: Rect = Rect(x=dxi, y=dyi, w=dxf, h=dyf)
-    print(f"{relative_rect=}")
+    yi: int = right_edge_region.rect.y + dyi
+    yf: int = right_edge_region.rect.y + dyf
 
-    board_region: Region = brewing_minigame_region.crop_relative(rect=relative_rect)
+    absolute_rect: Rect = Rect(x=xi, y=yi, w=xf - xi, h=yf - yi)
+    print(f"{absolute_rect=}")
+
+    board_region: Region = brewing_minigame_region.crop_absolute(rect=absolute_rect)
     print(f"{board_region.rect=}")
     board_region.show()
+
     return board_region
 
 
@@ -111,12 +115,11 @@ def _get_edged_minigame_region(minigame_region: Region) -> Region:
 def _get_right_edge_region(edged_minigame_region: Region) -> Region:
     """Get the right edge of the hex board in the given region."""
     print("Pre get right")
-    w_half: int = edged_minigame_region.rect.w // 2
-    y_half: int = edged_minigame_region.rect.h // 2
+    w_quarter: int = edged_minigame_region.rect.w // 4
 
-    xi: int = floor(edged_minigame_region.rect.x * 0.75)
-    dx: int = edged_minigame_region.rect.w - xi
+    xi: int = w_quarter * 3
     yi: int = 0
+    dx: int = edged_minigame_region.rect.w - xi
     dy: int = edged_minigame_region.rect.h
     right_edge_rect: Rect = Rect(x=xi, y=yi, w=dx, h=dy)
     print(f"{right_edge_rect=}")
@@ -131,10 +134,10 @@ def _get_bottom_edge_region(edged_minigame_region: Region) -> Region:
     w_half: int = edged_minigame_region.rect.w // 2
     y_half: int = edged_minigame_region.rect.h // 2
 
-    xi: int = edged_minigame_region.rect.x + w_half
-    yi: int = edged_minigame_region.rect.y + y_half
-    dx: int = edged_minigame_region.rect.right - w_half
-    dy: int = edged_minigame_region.rect.bottom - y_half
+    xi: int = w_half
+    yi: int = y_half
+    dx: int = edged_minigame_region.rect.w - w_half
+    dy: int = edged_minigame_region.rect.h - y_half
 
     bottom_edge_rect: Rect = Rect(x=xi, y=yi, w=dx, h=dy)
     print(f"{bottom_edge_rect=}")
@@ -181,7 +184,10 @@ def get_brewing_minigame_region(hwnd: int) -> Region:
 
     minigame_region: Region = client_region.crop_relative(
         rect=Rect(
-            x=left_bar_width, y=0, w=client_region.rect.w - (left_bar_width + right_bar_width), h=client_region.rect.h
+            x=left_bar_width,
+            y=0,
+            w=client_region.rect.w - (left_bar_width + right_bar_width),
+            h=client_region.rect.h
         )
     )
     print(f"{minigame_region.rect=}")
