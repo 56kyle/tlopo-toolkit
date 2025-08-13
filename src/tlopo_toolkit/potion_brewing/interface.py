@@ -12,8 +12,6 @@ from window_input import Window
 
 from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
-from tlopo_toolkit.potion_brewing.board import draw_bounding_box
-from tlopo_toolkit.potion_brewing.board import show
 from tlopo_toolkit.util import get_client_dimensions
 from tlopo_toolkit.util import get_client_rect
 from tlopo_toolkit.util import screenshot_window_from_title
@@ -23,6 +21,23 @@ PIECE_WINDOW_WIDTH_RATIO: float = 91 / 1936
 PIECE_WINDOW_HEIGHT_RATIO: float = 81 / 1056
 
 PLAY_AREA_OFFSET_RATIO_OF_HALF: float = 66 / 678
+
+
+def draw_bounding_box(img: np.ndarray, rect: Rect) -> np.ndarray:
+    """Draws a bounding box on the given image."""
+    new_img: np.ndarray = np.copy(img)
+    if len(new_img.shape) == 2:
+        new_img = cv2.cvtColor(new_img, cv2.COLOR_GRAY2BGR)
+
+    rect_img: np.ndarray = cv2.rectangle(new_img, (rect.x, rect.y), (rect.right, rect.bottom), (0, 255, 0), 1)
+    return rect_img
+
+
+def show(img: np.ndarray) -> None:
+    """Shows the given image."""
+    cv2.imshow("Image", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 def exit_minigame() -> None:
@@ -93,15 +108,13 @@ def find_board_range_x(bottom_half_section, ratio):
     h, w = bottom_half_section.shape[:2]
     gray: np.ndarray = cv2.cvtColor(bottom_half_section, cv2.COLOR_BGR2GRAY)
 
-    kernel_size: int = floor(19 * ratio)
-    if kernel_size % 2 == 0:
-        kernel_size += 1
+    kernel_size: int = 19
     kernel: tuple[int, int] = (kernel_size, kernel_size)
 
     # Use larger kernel size for much better edge detection
     blurred: np.ndarray = cv2.GaussianBlur(gray, kernel, 0)
     show(blurred)
-    edges: np.ndarray = cv2.Canny(blurred, floor(50 * ratio), floor(120 * ratio))
+    edges: np.ndarray = cv2.Canny(blurred, 50, 120)
     show(edges)
 
     # Sum edge pixels along each column to get x-coordinate counts
@@ -128,15 +141,10 @@ def find_board_range_y(board_right_section, ratio):
     h, w = board_right_section.shape[:2]
     gray: np.ndarray = cv2.cvtColor(board_right_section, cv2.COLOR_BGR2GRAY)
 
-    kernel_size: int = floor(19 * ratio)
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    kernel: tuple[int, int] = (kernel_size, kernel_size)
-
     # Use larger kernel size for much better edge detection
-    blurred: np.ndarray = cv2.GaussianBlur(gray, kernel, 0)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, (19, 19), 0)
     show(blurred)
-    edges: np.ndarray = cv2.Canny(blurred, floor(50 * ratio), floor(120 * ratio))
+    edges: np.ndarray = cv2.Canny(blurred, 50, 120)
     show(edges)
 
     # Sum edge pixels along each column to get x-coordinate counts
