@@ -105,31 +105,30 @@ def find_board_range_x(bottom_half_section, ratio):
     """Use the bottom half of the image to find horizontal bounds using most common x coordinate."""
     h: int
     w: int
+    print(bottom_half_section.shape)
     h, w = bottom_half_section.shape[:2]
-    gray: np.ndarray = cv2.cvtColor(bottom_half_section, cv2.COLOR_BGR2GRAY)
-
-    kernel_size: int = 19
-    kernel: tuple[int, int] = (kernel_size, kernel_size)
+    gray: np.ndarray = cv2.cvtColor(bottom_half_section, cv2.COLOR_BGR2LAB)
 
     # Use larger kernel size for much better edge detection
-    blurred: np.ndarray = cv2.GaussianBlur(gray, kernel, 0)
-    show(blurred)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, (19, 19), 3.2)
     edges: np.ndarray = cv2.Canny(blurred, 50, 120)
-    show(edges)
 
     # Sum edge pixels along each column to get x-coordinate counts
     x_counts: np.ndarray = edges.astype(bool, copy=True).sum(axis=0)
+    print(x_counts)
 
     w_half = w // 2
     dxi_inner: int = int(np.argmax(x_counts[:w_half]))
     dxf_inner: int = int(np.argmax(x_counts[w_half:])) + w_half
 
     dx_inner: int = dxf_inner - dxi_inner
-    hex_outer: float = dx_inner / 5.75
+    hex_outer: float = 0 * dx_inner / 5.75
 
     dxi: int = round(dxi_inner - (hex_outer / 4))
     dxf: int = round(dxf_inner + (hex_outer / 4))
 
+    show(draw_bounding_box(blurred, Rect(dxi, 0, dxf - dxi, h)))
+    show(draw_bounding_box(edges, Rect(dxi, 0, dxf - dxi, h)))
     show(draw_bounding_box(bottom_half_section, Rect(dxi, 0, dxf - dxi, h)))
     return dxi, dxf
 
@@ -138,31 +137,50 @@ def find_board_range_y(board_right_section, ratio):
     """Use the right edge of the board area to find vertical bounds."""
     h: int
     w: int
+    print(board_right_section.shape)
     h, w = board_right_section.shape[:2]
-    gray: np.ndarray = cv2.cvtColor(board_right_section, cv2.COLOR_BGR2GRAY)
+    gray: np.ndarray = cv2.cvtColor(board_right_section, cv2.COLOR_BGR2LAB)
 
     # Use larger kernel size for much better edge detection
-    blurred: np.ndarray = cv2.GaussianBlur(gray, (19, 19), 0)
-    show(blurred)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, (19, 19), 3.2)
     edges: np.ndarray = cv2.Canny(blurred, 50, 120)
-    show(edges)
 
     # Sum edge pixels along each column to get x-coordinate counts
     y_counts: np.ndarray = edges.astype(bool, copy=True).sum(axis=1)
+    print(y_counts)
 
     h_half: int = h // 2
     dyi_inner: int = int(np.argmax(y_counts[:h_half]))
     dyf_inner: int = int(np.argmax(y_counts[h_half:])) + h_half
 
     dy_inner: int = dyf_inner - dyi_inner
-    hex_inner: float = dy_inner / 19
+    hex_inner: float = 0 * dy_inner / 19
 
     dyi: int = round(dyi_inner - hex_inner)
     dyf: int = round(dyf_inner + hex_inner)
 
+    show(draw_bounding_box(blurred, Rect(0, dyi, w, dyf - dyi)))
+    show(draw_bounding_box(edges, Rect(0, dyi, w, dyf - dyi)))
     show(draw_bounding_box(board_right_section, Rect(0, dyi, w, dyf - dyi)))
 
     return dyi, dyf
+
+
+def find_outer_bounds(column_sums: np.ndarray) -> tuple[int, int]:
+    # Find all positions above a relative threshold
+    max_val = np.max(column_sums)
+    threshold = 0.8 * max_val
+
+    significant_indices = np.where(column_sums >= threshold)[0]
+
+    if len(significant_indices) == 0:
+        raise ValueError("No significant indices found.")
+
+    # First and last significant indices are your outer bounds
+    left_bound = significant_indices[0]
+    right_bound = significant_indices[-1]
+
+    return int(left_bound), int(right_bound)
 
 
 def crop_hexagonal_board(pil_image):
