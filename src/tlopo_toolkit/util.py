@@ -55,18 +55,19 @@ def get_brewing_board_region(hwnd: int) -> Region:
     """Returns the brewing hexboard region."""
     brewing_minigame_region: Region = get_brewing_minigame_region(hwnd=hwnd)
 
-    gray_minigame_region: Region = _get_gray_minigame_region(minigame_region=brewing_minigame_region)
-    blurred_minigame_region: Region = _get_blurred_minigame_region(minigame_region=gray_minigame_region)
-    edged_minigame_region: Region = _get_edged_minigame_region(minigame_region=blurred_minigame_region)
-    edged_minigame_region.show()
+    bottom_edge_region: Region = _get_bottom_edge_region(minigame_region=brewing_minigame_region)
+    right_edge_region: Region = _get_right_edge_region(minigame_region=brewing_minigame_region)
 
-    bottom_edge_region: Region = _get_bottom_edge_region(edged_minigame_region=edged_minigame_region)
-    right_edge_region: Region = _get_right_edge_region(edged_minigame_region=edged_minigame_region)
+    bottom_edge_img: np.ndarray = bottom_edge_region.export()
+    right_edge_img: np.ndarray = right_edge_region.export()
 
-    dxi_inner: int = __find_brewing_board_left_edge_offset(bottom_edge=bottom_edge_region)
-    dxf_inner: int = __find_brewing_board_right_edge_offset(bottom_edge=bottom_edge_region)
-    dyi_inner: int = __find_brewing_board_top_edge_offset(right_edge=right_edge_region)
-    dyf_inner: int = __find_brewing_board_bottom_edge_offset(right_edge=right_edge_region)
+    edged_bottom_edge_img: np.ndarray = _get_hex_edges_from_img(img=bottom_edge_img)
+    edged_right_edge_img: np.ndarray = _get_hex_edges_from_img(img=right_edge_img)
+
+    dxi_inner: int = __find_brewing_board_left_edge_offset(bottom_edge=edged_bottom_edge_img)
+    dxf_inner: int = __find_brewing_board_right_edge_offset(bottom_edge=edged_bottom_edge_img)
+    dyi_inner: int = __find_brewing_board_top_edge_offset(right_edge=edged_right_edge_img)
+    dyf_inner: int = __find_brewing_board_bottom_edge_offset(right_edge=edged_right_edge_img)
 
     dx_inner: int = dxf_inner - dxi_inner
     dx_hex_outer: float = 0 * dx_inner / 5.75
@@ -75,7 +76,7 @@ def get_brewing_board_region(hwnd: int) -> Region:
     dxf: int = round(dxf_inner + (dx_hex_outer / 4))
 
     # Convert bottom_edge offsets to brewing_minigame_region coordinate system
-    # bottom_edge starts at (w_half, y_half) within edged_minigame_region
+    # bottom_edge starts at (w_half, y_half) within minigame_region
     # The offsets dxi, dxf are already relative to the bottom_edge start position
     bottom_edge_start_x = brewing_minigame_region.rect.w // 2
     xi: int = brewing_minigame_region.rect.x + bottom_edge_start_x + dxi
@@ -87,7 +88,7 @@ def get_brewing_board_region(hwnd: int) -> Region:
     dyf: int = round(dyf_inner)
 
     # Convert right_edge offsets to brewing_minigame_region coordinate system
-    # right_edge starts at (w_quarter * 3, 0) within edged_minigame_region
+    # right_edge starts at (w_quarter * 3, 0) within minigame_region
     right_edge_start_y = 0
     yi: int = brewing_minigame_region.rect.y + right_edge_start_y + dyi
     yf: int = brewing_minigame_region.rect.y + right_edge_start_y + dyf
@@ -106,84 +107,70 @@ def get_brewing_board_region(hwnd: int) -> Region:
     return board_region
 
 
-def _get_gray_minigame_region(minigame_region: Region) -> Region:
-    """Converts the given region's image to grayscale and returns a new region with the grayscale image."""
-    gray_image: np.ndarray = cv2.cvtColor(minigame_region.image, cv2.COLOR_BGR2GRAY)
-    return Region(image=gray_image, rect=minigame_region.rect)
-
-
-def _get_blurred_minigame_region(minigame_region: Region) -> Region:
-    """Blurs the provided region's image and returns a new region with the blurred image."""
-    blurred_image: np.ndarray = cv2.GaussianBlur(minigame_region.image, (19, 19), 0)
-    return Region(image=blurred_image, rect=minigame_region.rect)
-
-
-def _get_edged_minigame_region(minigame_region: Region) -> Region:
-    """Get the edged version of the minigame region."""
-    edged_image: np.ndarray = cv2.Canny(minigame_region.image, 50, 120)
-    return Region(image=edged_image, rect=minigame_region.rect)
-
-
-def _get_right_edge_region(edged_minigame_region: Region) -> Region:
+def _get_right_edge_region(minigame_region: Region) -> Region:
     """Get the right edge of the hex board in the given region."""
     print("Pre get right")
-    w_quarter: int = edged_minigame_region.rect.w // 4
+    w_quarter: int = minigame_region.rect.w // 4
 
     xi: int = w_quarter * 3
     yi: int = 0
-    dx: int = edged_minigame_region.rect.w - xi
-    dy: int = edged_minigame_region.rect.h
+    dx: int = minigame_region.rect.w - xi
+    dy: int = minigame_region.rect.h
     right_edge_rect: Rect = Rect(x=xi, y=yi, w=dx, h=dy)
     print(f"{right_edge_rect=}")
-    right_edge_region: Region = edged_minigame_region.crop_relative(rect=right_edge_rect)
+    right_edge_region: Region = minigame_region.crop_relative(rect=right_edge_rect)
     print(f"{right_edge_region.rect=}")
     right_edge_region.show()
     return right_edge_region
 
 
-def _get_bottom_edge_region(edged_minigame_region: Region) -> Region:
+def _get_bottom_edge_region(minigame_region: Region) -> Region:
     """Get the bottom edge of the hex board in the given region."""
-    w_half: int = edged_minigame_region.rect.w // 2
-    y_half: int = edged_minigame_region.rect.h // 2
+    w_half: int = minigame_region.rect.w // 2
+    y_half: int = minigame_region.rect.h // 2
 
     xi: int = w_half
     yi: int = y_half
-    dx: int = edged_minigame_region.rect.w - w_half
-    dy: int = edged_minigame_region.rect.h - y_half
+    dx: int = minigame_region.rect.w - w_half
+    dy: int = minigame_region.rect.h - y_half
 
     bottom_edge_rect: Rect = Rect(x=xi, y=yi, w=dx, h=dy)
     print(f"{bottom_edge_rect=}")
-    bottom_edge_region: Region = edged_minigame_region.crop_relative(rect=bottom_edge_rect)
+    bottom_edge_region: Region = minigame_region.crop_relative(rect=bottom_edge_rect)
     bottom_edge_region.show()
     return bottom_edge_region
 
 
-def __find_brewing_board_left_edge_offset(bottom_edge: Region) -> int:
+def _get_hex_edges_from_img(img: np.ndarray) -> np.ndarray:
+    """Returns the edges of the hex board as a mask of the given image."""
+    gray_image: np.ndarray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blurred_image: np.ndarray = cv2.GaussianBlur(gray_image, (19, 19), 0)
+    edged_image: np.ndarray = cv2.Canny(blurred_image, 50, 120)
+    return edged_image
+
+
+def __find_brewing_board_left_edge_offset(bottom_edge: np.ndarray) -> int:
     """Find the left edge of the brewing board."""
-    region_image: np.ndarray = bottom_edge.export()
-    x_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=0)
-    half_width: int = bottom_edge.rect.w // 2
+    x_counts: np.ndarray = bottom_edge.astype(bool, copy=True).sum(axis=0)
+    half_width: int = bottom_edge.shape[0] // 2
     return int(np.argmax(x_counts[:half_width]))
 
 
-def __find_brewing_board_right_edge_offset(bottom_edge: Region) -> int:
-    region_image: np.ndarray = bottom_edge.export()
-    x_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=0)
-    half_width: int = bottom_edge.rect.w // 2
+def __find_brewing_board_right_edge_offset(bottom_edge: np.ndarray) -> int:
+    x_counts: np.ndarray = bottom_edge.astype(bool, copy=True).sum(axis=0)
+    half_width: int = bottom_edge.shape[0] // 2
     return int(np.argmax(x_counts[half_width:])) + half_width
 
 
-def __find_brewing_board_top_edge_offset(right_edge: Region) -> int:
-    region_image: np.ndarray = right_edge.export()
-    y_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=1)
-    half_height: int = right_edge.rect.h // 2
+def __find_brewing_board_top_edge_offset(right_edge: np.ndarray) -> int:
+    y_counts: np.ndarray = right_edge.astype(bool, copy=True).sum(axis=1)
+    half_height: int = right_edge.shape[1] // 2
     return int(np.argmax(y_counts[:half_height]))
 
 
-def __find_brewing_board_bottom_edge_offset(right_edge: Region) -> int:
-    region_image: np.ndarray = right_edge.export()
-    y_counts: np.ndarray = region_image.astype(bool, copy=True).sum(axis=1)
-    half_height: int = right_edge.rect.h // 2
+def __find_brewing_board_bottom_edge_offset(right_edge: np.ndarray) -> int:
+    y_counts: np.ndarray = right_edge.astype(bool, copy=True).sum(axis=1)
+    half_height: int = right_edge.shape[1] // 2
     return int(np.argmax(y_counts[half_height:])) + half_height
 
 
