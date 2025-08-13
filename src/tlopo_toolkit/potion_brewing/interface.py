@@ -110,16 +110,18 @@ def find_board_range_x(bottom_half_section, ratio):
     gray: np.ndarray = cv2.cvtColor(bottom_half_section, cv2.COLOR_BGR2LAB)
 
     # Use larger kernel size for much better edge detection
-    blurred: np.ndarray = cv2.GaussianBlur(gray, (19, 19), 3.2)
-    edges: np.ndarray = cv2.Canny(blurred, 50, 120)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, (9, 9), 3.2)
+    edges: np.ndarray = cv2.Canny(blurred, 30, 120)
 
     # Sum edge pixels along each column to get x-coordinate counts
     x_counts: np.ndarray = edges.astype(bool, copy=True).sum(axis=0)
     print(x_counts)
 
     w_half = w // 2
-    dxi_inner: int = int(np.argmax(x_counts[:w_half]))
-    dxf_inner: int = int(np.argmax(x_counts[w_half:])) + w_half
+    # dxi_inner: int = int(np.argmax(x_counts[:w_half]))
+    # dxf_inner: int = int(np.argmax(x_counts[w_half:])) + w_half
+
+    dxi_inner, dxf_inner = find_outer_bounds(x_counts)
 
     dx_inner: int = dxf_inner - dxi_inner
     hex_outer: float = 0 * dx_inner / 5.75
@@ -143,15 +145,16 @@ def find_board_range_y(board_right_section, ratio):
 
     # Use larger kernel size for much better edge detection
     blurred: np.ndarray = cv2.GaussianBlur(gray, (19, 19), 3.2)
-    edges: np.ndarray = cv2.Canny(blurred, 50, 120)
+    edges: np.ndarray = cv2.Canny(blurred, 30, 120)
 
     # Sum edge pixels along each column to get x-coordinate counts
     y_counts: np.ndarray = edges.astype(bool, copy=True).sum(axis=1)
     print(y_counts)
 
     h_half: int = h // 2
-    dyi_inner: int = int(np.argmax(y_counts[:h_half]))
-    dyf_inner: int = int(np.argmax(y_counts[h_half:])) + h_half
+    # dyi_inner: int = int(np.argmax(y_counts[:h_half]))
+    # dyf_inner: int = int(np.argmax(y_counts[h_half:])) + h_half
+    dyi_inner, dyf_inner = find_outer_bounds(y_counts)
 
     dy_inner: int = dyf_inner - dyi_inner
     hex_inner: float = 0 * dy_inner / 19
@@ -169,7 +172,7 @@ def find_board_range_y(board_right_section, ratio):
 def find_outer_bounds(column_sums: np.ndarray) -> tuple[int, int]:
     # Find all positions above a relative threshold
     max_val = np.max(column_sums)
-    threshold = 0.8 * max_val
+    threshold = 0.3 * max_val
 
     significant_indices = np.where(column_sums >= threshold)[0]
 
