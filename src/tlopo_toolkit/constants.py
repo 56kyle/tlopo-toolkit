@@ -32,7 +32,7 @@ USER_RUNTIME_FOLDER.mkdir(parents=True, exist_ok=True)
 DEFAULT_PYDANTIC_CONFIG: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 DEFAULT_FROZEN_PYDANTIC_CONFIG: ConfigDict = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 DEFAULT_PYDANTIC_SETTINGS_CONFIG: SettingsConfigDict = SettingsConfigDict(
-    env_prefix="TLOPO_TOOLKIT", env_nested_delimiter="_", arbitrary_types_allowed=True, extra="allow"
+    env_prefix="TLOPO_TOOLKIT__", env_nested_delimiter="__", arbitrary_types_allowed=True, extra="allow"
 )
 
 REPO_FOLDER: Path = Path(__file__).resolve().parent.parent.parent
