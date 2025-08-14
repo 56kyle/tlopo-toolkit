@@ -1,63 +1,64 @@
-"""Process with window management."""
+"""Application class with process and window management."""
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import ClassVar, Optional
 
+import psutil
 from pywinctl._main import BaseWindow
+
 from tlopo_toolkit.exceptions import WindowNotFoundError
-from tlopo_toolkit.process import Process, ProcessInfo
+from tlopo_toolkit.process import Executable, spawn_process, terminate_process
 from tlopo_toolkit.window import find_windows_for_process
 
 
-class Application(Process):
-    """Process with window discovery."""
+@dataclass(frozen=True)
+class Application:
+    """Application instance with concrete process and window."""
+    process: psutil.Process
+    window: Optional[BaseWindow] = None
 
-    def __init__(self, executable_path: Path, working_directory: Optional[Path] = None):
-        super().__init__(executable_path, working_directory)
-        self._window: Optional[BaseWindow] = None
 
-    @property
-    def window(self) -> Optional[BaseWindow]:
-        """Get discovered window."""
-        return self._window
+    @classmethod
+    def spawn(cls, args: list[str] = None) -> "Application":
+        """Spawn new application instance."""
+        process = spawn_process(cls.executable, args)
+        return cls(process=process)
 
-    def find_window(self) -> Optional[BaseWindow]:
-        """Find main window for process."""
-        if not self.is_running:
-            self._window = None
-            return None
-        
-        windows = find_windows_for_process(self.process_info)
-        self._window = windows[0] if windows else None
-        return self._window
+    @classmethod
+    def spawn_with_window(cls, args: list[str] = None, timeout: float = 10.0) -> "Application":
+        """Spawn application and wait for window."""
+        process = spawn_process(cls.executable, args)
+        window = cls._wait_for_window(process, timeout)
+        return cls(process=process, window=window)
 
-    def wait_for_window(self, timeout: float = 10.0) -> BaseWindow:
-        """Wait for window to appear."""
-        if not self.is_running:
+    @classmethod
+    def _wait_for_window(cls, process: psutil.Process, timeout: float = 10.0) -> BaseWindow:
+        """Wait for window to appear for process."""
+        if not process.is_running():
             raise WindowNotFoundError("Process not running")
 
         start = time.time()
         while time.time() - start < timeout:
-            if self.find_window():
-                return self._window
+            windows = find_windows_for_process(process)
+            if windows:
+                return windows[0]
             time.sleep(0.1)
-        
+
         raise WindowNotFoundError(f"Window not found in {timeout}s")
 
-    def spawn_with_window(self, args: list[str] = None, timeout: float = 10.0) -> tuple[ProcessInfo, BaseWindow]:
-        """Spawn and wait for window."""
-        proc_info = self.spawn(args)
-        window = self.wait_for_window(timeout)
-        return proc_info, window
+    @property
+    def is_running(self) -> bool:
+        """Check if process is running."""
+        return self.process.is_running()
 
     def terminate(self, force: bool = False, timeout: float = 5.0) -> None:
-        """Terminate process and clear window."""
-        super().terminate(force, timeout)
-        self._window = None
+        """Terminate the process."""
+        terminate_process(self.process, force, timeout)
 
-    def __enter__(self) -> 'Application':
-        self.spawn()
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.terminate()
+    def find_window(self) -> Optional[BaseWindow]:
+        """Find window for this process."""
+        if not self.is_running:
+            return None
+        windows = find_windows_for_process(self.process)
+        return windows[0] if windows else None
