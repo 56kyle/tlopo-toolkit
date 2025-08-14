@@ -49,56 +49,53 @@ class Server:
 
 @dataclass(frozen=True)
 class Client:
-    """TLOPO client instance."""
+    """TLOPO client instance - immutable reference."""
     account: Account
-    application
+    application: Application
 
-    def __init__(self, account: Account, executable_path: Optional[Path] = None):
-        self.account = account
-        self._application = Application(executable_path or config.game_folder / "TLOPO.exe")
+    @classmethod
+    def create(cls, account: Account, executable_path: Optional[Path] = None) -> "Client":
+        """Create a new client instance."""
+        app = Application(executable_path or config.game_folder / "TLOPO.exe")
+        return cls(account=account, application=app)
 
-    @property
-    def application(self) -> Application:
-        """Get the underlying application."""
-        return self._application
-
-    def spawn(self, command_args: list[str] = None):
+    def spawn(self, args: list[str] = None):
         """Spawn the TLOPO client."""
-        return self._application.spawn(command_args)
+        return self.application.spawn(args)
 
     def terminate(self, force: bool = False, timeout: float = 5.0):
         """Terminate the TLOPO client."""
-        self._application.terminate(force, timeout)
+        self.application.terminate(force, timeout)
 
     @property
     def is_running(self) -> bool:
         """Check if client is running."""
-        return self._application.is_running
+        return self.application.is_running
 
 
+@dataclass(frozen=True)
 class Launcher:
-    """TLOPO launcher instance."""
+    """TLOPO launcher instance - immutable reference."""
+    application: Application
 
-    def __init__(self, executable_path: Optional[Path] = None):
-        self._application = Application(executable_path or config.game_folder / "Launcher.exe")
+    @classmethod
+    def create(cls, executable_path: Optional[Path] = None) -> "Launcher":
+        """Create a new launcher instance."""
+        app = Application(executable_path or config.game_folder / "Launcher.exe")
+        return cls(application=app)
 
-    @property
-    def application(self) -> Application:
-        """Get the underlying application."""
-        return self._application
-
-    def spawn(self, command_args: list[str] = None):
+    def spawn(self, args: list[str] = None):
         """Spawn the TLOPO launcher."""
-        return self._application.spawn(command_args)
+        return self.application.spawn(args)
 
     def terminate(self, force: bool = False, timeout: float = 5.0):
         """Terminate the TLOPO launcher."""
-        self._application.terminate(force, timeout)
+        self.application.terminate(force, timeout)
 
     @property
     def is_running(self) -> bool:
         """Check if launcher is running."""
-        return self._application.is_running
+        return self.application.is_running
 
 
 @dataclass(frozen=True)

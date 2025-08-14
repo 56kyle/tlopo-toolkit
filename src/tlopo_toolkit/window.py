@@ -8,30 +8,27 @@ from tlopo_toolkit.process import ProcessInfo
 
 @dataclass(frozen=True)
 class WindowInfo:
-    """Window identification data."""
+    """Window identification."""
     hwnd: int
     pid: int
 
 
 class Window:
-    """Window discovery for processes."""
+    """Window discovery."""
     
     @staticmethod
     def find_all_windows_for_process(process_info: ProcessInfo) -> list[WindowInfo]:
-        """Find all visible windows for a given process."""
+        """Find visible windows for process."""
+        windows = []
         try:
-            all_windows = pywinctl.getAllWindows()
-            matching_windows = []
-            
-            for window in all_windows:
+            for window in pywinctl.getAllWindows():
                 if hasattr(window, '_hWnd') and window.visible:
                     try:
-                        _, window_pid = win32process.GetWindowThreadProcessId(window._hWnd)
-                        if window_pid == process_info.pid:
-                            matching_windows.append(WindowInfo(hwnd=window._hWnd, pid=process_info.pid))
+                        _, pid = win32process.GetWindowThreadProcessId(window._hWnd)
+                        if pid == process_info.pid:
+                            windows.append(WindowInfo(window._hWnd, pid))
                     except:
                         continue
-            
-            return matching_windows
         except:
-            return []
+            pass
+        return windows
