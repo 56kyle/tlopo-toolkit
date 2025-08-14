@@ -1,19 +1,25 @@
 """Module containing logic for interacting with the potion brewing minigame's interface."""
 
 from math import floor
+from typing import Optional
+from typing import Union
 
 import cv2
 import numpy as np
 import pywinctl
 import shapely
 import win32gui
-from PIL import Image
+from PIL.Image import Image
+from PIL.Image import fromarray
 from window_input import Window
 
 from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
+from tlopo_toolkit.util import as_cv_img
+from tlopo_toolkit.util import find_window_by_title
 from tlopo_toolkit.util import get_client_dimensions
 from tlopo_toolkit.util import get_client_rect
+from tlopo_toolkit.util import screenshot_window
 from tlopo_toolkit.util import screenshot_window_from_title
 
 
@@ -60,48 +66,35 @@ def get_scaled_reference_image(window: Window, img: np.ndarray) -> np.ndarray:
     )
 
 
-def get_piece_slots(window: Window) -> list[Point]:
-    left, top, right, bottom = win32gui.GetWindowRect(window.hwnd)
-
-
-def get_minigame_area() -> Image:
+def get_minigame_img(hwnd: int) -> np.ndarray:
     """Returns an image of the game area."""
-    img: Image = screenshot_window_from_title("The Legend of Pirates Online [BETA]")
+    img: Optional[Image] = screenshot_window(hwnd=hwnd)
+    if img is None:
+        raise ValueError("No image found.")
     img_arr: np.ndarray = np.array(img)
+    bgr: np.ndarray = cv2.cvtColor(img_arr, cv2.COLOR_RGB2BGR)
+    return crop_to_minigame_img(bgr)
 
-    y_half: int = img.size[1] // 2
-    row_sums: np.ndarray = img_arr[y_half].sum(axis=1)
+
+def crop_to_minigame_img(img: np.ndarray) -> np.ndarray:
+    """Crops the given image to the minigame area."""
+
+    y_half: int = img.shape[0] // 2
+    row_sums: np.ndarray = img[y_half].sum(axis=1)
 
     midpoint: int = len(row_sums) // 2
     left_bar_width: int = sum(np.array(row_sums[:midpoint] == 0))
     right_bar_width: int = sum(np.array(row_sums[midpoint:] == 0))
 
-    return img.crop((left_bar_width, 0, img.size[0] - right_bar_width, img.size[1]))
+    xi: int = left_bar_width
+    xf: int = img.shape[1] - right_bar_width
+    yi: int = 0
+    yf: int = img.shape[0]
+
+    return img[yi:yf, xi:xf]
 
 
-def get_board_area() -> Image:
-    """Returns the play area relative to the window client."""
-    get_minigame_area()
-
-
-def blur_relative_to_size(img: np.ndarray, size: int) -> np.ndarray:
-    """Blurs the image based on the resolution of the given image."""
-    kernel_scale: int = size
-    if size < 200:
-        print(200)
-        kernel_scale: int = 5
-    elif size < 400:
-        print(400)
-        kernel_scale: int = 5
-    elif size < 800:
-        print(800)
-        kernel_scale: int = 13
-    else:
-        kernel_scale: int = 19
-    return cv2.GaussianBlur(img, (kernel_scale, kernel_scale), 0)
-
-
-def find_board_range_x(bottom_half_section, ratio):
+def find_board_range_x(bottom_half_section):
     """Use the bottom half of the image to find horizontal bounds using most common x coordinate."""
     h: int
     w: int
@@ -129,13 +122,10 @@ def find_board_range_x(bottom_half_section, ratio):
     dxi: int = round(dxi_inner - (hex_outer / 4))
     dxf: int = round(dxf_inner + (hex_outer / 4))
 
-    show(draw_bounding_box(blurred, Rect(dxi, 0, dxf - dxi, h)))
-    show(draw_bounding_box(edges, Rect(dxi, 0, dxf - dxi, h)))
-    show(draw_bounding_box(bottom_half_section, Rect(dxi, 0, dxf - dxi, h)))
     return dxi, dxf
 
 
-def find_board_range_y(board_right_section, ratio):
+def find_board_range_y(board_right_section):
     """Use the right edge of the board area to find vertical bounds."""
     h: int
     w: int
@@ -162,10 +152,6 @@ def find_board_range_y(board_right_section, ratio):
     dyi: int = round(dyi_inner - hex_inner)
     dyf: int = round(dyf_inner + hex_inner)
 
-    show(draw_bounding_box(blurred, Rect(0, dyi, w, dyf - dyi)))
-    show(draw_bounding_box(edges, Rect(0, dyi, w, dyf - dyi)))
-    show(draw_bounding_box(board_right_section, Rect(0, dyi, w, dyf - dyi)))
-
     return dyi, dyf
 
 
@@ -186,55 +172,61 @@ def find_outer_bounds(column_sums: np.ndarray) -> tuple[int, int]:
     return int(left_bound), int(right_bound)
 
 
-def crop_hexagonal_board(pil_image):
+def crop_hexagonal_board(image: Union[Image, np.ndarray]) -> np.ndarray:
     """Detect hexagonal board using separate X and Y range finding."""
-    # Convert PIL to OpenCV format
-    img_array: np.ndarray = np.array(pil_image)
-    img: np.ndarray = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR) if len(img_array.shape) == 3 else img_array
+    if isinstance(image, Image):
+        img_array: np.ndarray = np.array(image)
+        img: np.ndarray = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+    else:
+        img: np.ndarray = image
 
+    # Convert PIL to OpenCV format
+    board_rect: Rect = get_board_rect(img)
+
+    cropped: np.ndarray = img[board_rect.y : board_rect.bottom, board_rect.x : board_rect.right]
+
+    return cropped
+
+
+def get_board_rect(image: Union[Image, np.ndarray]) -> Rect:
+    img: np.ndarray = as_cv_img(image)
     h: int
     w: int
     h, w = img.shape[:2]
-
     # Bottom half of image height, but also halve the width (right half) - for X detection
     bottom_half_start: int = h // 2
     width_half_start: int = w // 2
     bottom_half_section: np.ndarray = img[bottom_half_start:, width_half_start:]
-
     # Board area starts at roughly 3/4 width (right quarter of image) - for Y detection
     board_area_start: int = int(w * 0.75)
     board_right_section: np.ndarray = img[:, board_area_start:]
-
-    ratio: float = w / 1350
-
     # Find the board boundaries
-    board_left, board_right = find_board_range_x(bottom_half_section, ratio)
-    board_top, board_bottom = find_board_range_y(board_right_section, ratio)
-
+    board_left, board_right = find_board_range_x(bottom_half_section)
+    board_top, board_bottom = find_board_range_y(board_right_section)
     # Adjust coordinates back to full image
     board_left += width_half_start
     board_right += width_half_start
 
-    # Minimal padding
     crop_x: int = max(0, board_left)
     crop_y: int = max(0, board_top)
     crop_w: int = min(w - crop_x, board_right - board_left)
     crop_h: int = min(h - crop_y, board_bottom - board_top)
-    show(draw_bounding_box(img, Rect(crop_x, crop_y, crop_w, crop_h)))
+    return Rect(crop_x, crop_y, crop_w, crop_h)
 
-    cropped: np.ndarray = img[crop_y : crop_y + crop_h, crop_x : crop_x + crop_w]
 
-    # Convert back to PIL
-    cropped_rgb: np.ndarray = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-    return Image.fromarray(cropped_rgb)
+def crop_board_from_rect(img: np.ndarray, rect: Rect) -> np.ndarray:
+    """Crops the board from the given image."""
+    return img[rect.y : rect.bottom, rect.x : rect.right]
 
 
 if __name__ == "__main__":
     # img: Image = screenshot_window_from_title("The Legend of Pirates Online [BETA]")
-    img: Image = get_minigame_area()
-    img_arr: np.ndarray = np.array(img)
+    hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
+    if hwnd is None:
+        raise ValueError("No window found.")
+    img: np.ndarray = get_minigame_img(hwnd=hwnd)
 
-    crop_hexagonal_board(img_arr).show()
+    crop_hexagonal_board(img).show()
 
     # xp = (img.size[0] // 2) // 9
     # yp = (img.size[1] // 2) // 9

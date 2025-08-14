@@ -5,6 +5,7 @@ from typing import ClassVar
 from typing import Generic
 from typing import Literal
 from typing import NamedTuple
+from typing import Optional
 from typing import TypeVar
 from typing import Union
 
@@ -335,6 +336,15 @@ class Layout:
     size: Point
     origin: Point
 
+    def pixel_to_hex(self, p: Point) -> Hex:
+        return pixel_to_hex_rounded(self, p)
+
+    def pixel_to_hex_fractional(self, p: Point) -> HexFractional:
+        return pixel_to_hex_fractional(self, p)
+
+    def hex_to_pixel(self, h: Hex) -> Point:
+        return hex_to_pixel(self, h)
+
 
 ORIENTATION_POINTY: Orientation = Orientation(
     math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5
@@ -381,3 +391,46 @@ def polygon_corners(layout: Layout, h: Hex) -> list[Point]:
         offset = hex_corner_offset(layout, i)
         corners.append(Point(center.x + offset.x, center.y + offset.y))
     return corners
+
+
+def polygon_lines(layout: Layout, h: Hex) -> set[Point]:
+    """Returns a list of Points making up the lines of the hexagon.
+
+    This is found by linearly interpolating the corners.
+    """
+
+    corners: list[Point] = polygon_corners(layout, h)
+    lines: list[tuple[Point, Point]] = []
+    for i in range(0, 6):
+        lines.append((corners[i], corners[(i + 1) % 6]))
+
+    points: set[Point] = set()
+
+    for segment in lines:
+        for point in linear_interpolate_points(segment[0], segment[1]):
+            points.add(Point(*point))
+
+    return points
+
+
+def linear_interpolate_points(p1: Point, p2: Point, num_points: Optional[int] = None) -> np.ndarray:
+    """Linear interpolation between two points using NumPy, returning integer coordinates."""
+    p1 = np.array([p1.x, p1.y])
+    p2 = np.array([p2.x, p2.y])
+
+    # If num_points not specified, use max distance for smooth interpolation
+    if num_points is None:
+        num_points: int = int(np.max(np.abs(p2 - p1)))
+
+    # Handle case where points are the same
+    if num_points == 0:
+        return np.array([p1], dtype=int)
+
+    # Create parameter array from 0 to 1
+    t: np.ndarray = np.linspace(0, 1, num_points + 1)
+
+    # Linear interpolation: p = p1 + t * (p2 - p1)
+    points: np.ndarray = p1 + t[:, np.newaxis] * (p2 - p1)
+
+    # Round and convert to integers
+    return np.round(points).astype(int)

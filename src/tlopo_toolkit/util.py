@@ -12,7 +12,8 @@ import numpy as np
 import win32con
 import win32gui
 import win32ui
-from PIL import Image
+from PIL.Image import Image
+from PIL.Image import fromarray
 from pywinctl import getAllWindows
 from pywinctl._main import BaseWindow
 
@@ -223,7 +224,7 @@ def get_client_rect(hwnd: int) -> Rect:
     return Rect(left, top, right - left, bottom - top)
 
 
-def array_to_image(bitmap_data: bytes, width: int, height: int) -> Optional[Image.Image]:
+def array_to_image(bitmap_data: bytes, width: int, height: int) -> Optional[Image]:
     """Convert BGRA bitmap bytes to RGB PIL Image."""
     try:
         expected_size = width * height * 4
@@ -232,7 +233,7 @@ def array_to_image(bitmap_data: bytes, width: int, height: int) -> Optional[Imag
 
         array = np.frombuffer(bitmap_data, dtype=np.uint8)
         array = array.reshape((height, width, 4))[:, :, :3][:, :, ::-1]
-        return Image.fromarray(array)
+        return fromarray(array)
     except:
         return None
 
@@ -307,7 +308,7 @@ def is_bitmap_valid(bitmap_data: bytes, width: int, height: int) -> bool:
         return False
 
 
-def screenshot_window_from_title(window_title: str) -> Optional[Image.Image]:
+def screenshot_window_from_title(window_title: str) -> Optional[Image]:
     """Capture complete window client area including offscreen content."""
     hwnd: int = find_window_by_title(window_title)
     if not hwnd or not win32gui.IsWindow(hwnd):
@@ -315,7 +316,7 @@ def screenshot_window_from_title(window_title: str) -> Optional[Image.Image]:
     return screenshot_window(hwnd)
 
 
-def screenshot_window(hwnd: int) -> Optional[Image.Image]:
+def screenshot_window(hwnd: int) -> Optional[Image]:
     width, height = get_client_dimensions(hwnd)
     if width <= 0 or height <= 0:
         return None
@@ -339,6 +340,13 @@ def screenshot_window(hwnd: int) -> Optional[Image.Image]:
                 return array_to_image(bitmap_data, width, height)
 
     return None
+
+
+def as_cv_img(img: Union[Image, np.ndarray]) -> np.ndarray:
+    if isinstance(img, Image):
+        img_array: np.ndarray = np.array(img)
+        return cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+    return img
 
 
 if __name__ == "__main__":
