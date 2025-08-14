@@ -15,18 +15,12 @@ from tlopo_toolkit.window import find_windows_for_process
 @dataclass(frozen=True)
 class Application:
     """Application instance with concrete process and window."""
+    executable: ClassVar[Executable]
     process: psutil.Process
-    window: Optional[BaseWindow] = None
-
-
-    @classmethod
-    def spawn(cls, args: list[str] = None) -> "Application":
-        """Spawn new application instance."""
-        process = spawn_process(cls.executable, args)
-        return cls(process=process)
+    window: BaseWindow
 
     @classmethod
-    def spawn_with_window(cls, args: list[str] = None, timeout: float = 10.0) -> "Application":
+    def spawn(cls, args: list[str] = None, timeout: float = 10.0) -> "Application":
         """Spawn application and wait for window."""
         process = spawn_process(cls.executable, args)
         window = cls._wait_for_window(process, timeout)
@@ -55,10 +49,3 @@ class Application:
     def terminate(self, force: bool = False, timeout: float = 5.0) -> None:
         """Terminate the process."""
         terminate_process(self.process, force, timeout)
-
-    def find_window(self) -> Optional[BaseWindow]:
-        """Find window for this process."""
-        if not self.is_running:
-            return None
-        windows = find_windows_for_process(self.process)
-        return windows[0] if windows else None
