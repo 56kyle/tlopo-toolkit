@@ -125,7 +125,7 @@ def find_board_range_x(bottom_half_section):
     return dxi, dxf
 
 
-def find_board_range_y(board_right_section):
+def find_board_range_y(board_right_section: np.ndarray) -> tuple[int, int]:
     """Use the right edge of the board area to find vertical bounds."""
     h: int
     w: int
@@ -155,12 +155,12 @@ def find_board_range_y(board_right_section):
     return dyi, dyf
 
 
-def find_outer_bounds(column_sums: np.ndarray) -> tuple[int, int]:
+def find_outer_bounds(axis_sums: np.ndarray) -> tuple[int, int]:
     # Find all positions above a relative threshold
-    max_val = np.max(column_sums)
-    threshold = 0.3 * max_val
+    max_val: int = np.max(axis_sums)
+    threshold: float = 0.3 * max_val
 
-    significant_indices = np.where(column_sums >= threshold)[0]
+    significant_indices: np.ndarray = np.where(axis_sums >= threshold)[0]
 
     if len(significant_indices) == 0:
         raise ValueError("No significant indices found.")

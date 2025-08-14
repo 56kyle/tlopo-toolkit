@@ -336,15 +336,6 @@ class Layout:
     size: Point
     origin: Point
 
-    def pixel_to_hex(self, p: Point) -> Hex:
-        return pixel_to_hex_rounded(self, p)
-
-    def pixel_to_hex_fractional(self, p: Point) -> HexFractional:
-        return pixel_to_hex_fractional(self, p)
-
-    def hex_to_pixel(self, h: Hex) -> Point:
-        return hex_to_pixel(self, h)
-
 
 ORIENTATION_POINTY: Orientation = Orientation(
     math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5
