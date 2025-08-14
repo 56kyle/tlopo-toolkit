@@ -71,7 +71,6 @@ class Launcher(Application):
     """Class representing a particular instance of TLOPO's launcher."""
 
 
-
 @dataclass(frozen=True)
 class Game:
     """Class representing a particular instance of TLOPO's game session."""

@@ -103,8 +103,11 @@ class Application(Process):
         window_info = await self.wait_for_window_async(window_timeout)
         return process_info, window_info
 
-    def spawn_with_window_sync(self, additional_args: Optional[List[str]] = None, window_timeout: float = 10.0) -> \
-    tuple[ProcessInfo, WindowInfo]:
+    def spawn_with_window_sync(
+        self,
+        additional_args: Optional[List[str]] = None,
+        window_timeout: float = 10.0
+    ) -> tuple[ProcessInfo, WindowInfo]:
         """Spawn process and wait for window to appear synchronously."""
         process_info = self.spawn_process_sync(additional_args)
         window_info = self.wait_for_window_sync(window_timeout)
