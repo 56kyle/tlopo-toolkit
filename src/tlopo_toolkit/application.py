@@ -3,9 +3,10 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+from pywinctl._main import BaseWindow
 from tlopo_toolkit.exceptions import WindowNotFoundError
 from tlopo_toolkit.process import Process, ProcessInfo
-from tlopo_toolkit.window import Window, WindowInfo
+from tlopo_toolkit.window import find_windows_for_process
 
 
 class Application(Process):
@@ -13,24 +14,24 @@ class Application(Process):
 
     def __init__(self, executable_path: Path, working_directory: Optional[Path] = None):
         super().__init__(executable_path, working_directory)
-        self._window: Optional[WindowInfo] = None
+        self._window: Optional[BaseWindow] = None
 
     @property
-    def window(self) -> Optional[WindowInfo]:
+    def window(self) -> Optional[BaseWindow]:
         """Get discovered window."""
         return self._window
 
-    def find_window(self) -> Optional[WindowInfo]:
+    def find_window(self) -> Optional[BaseWindow]:
         """Find main window for process."""
         if not self.is_running:
             self._window = None
             return None
         
-        windows = Window.find_all_windows_for_process(self.process_info)
+        windows = find_windows_for_process(self.process_info)
         self._window = windows[0] if windows else None
         return self._window
 
-    def wait_for_window(self, timeout: float = 10.0) -> WindowInfo:
+    def wait_for_window(self, timeout: float = 10.0) -> BaseWindow:
         """Wait for window to appear."""
         if not self.is_running:
             raise WindowNotFoundError("Process not running")
@@ -43,11 +44,11 @@ class Application(Process):
         
         raise WindowNotFoundError(f"Window not found in {timeout}s")
 
-    def spawn_with_window(self, args: list[str] = None, timeout: float = 10.0) -> tuple[ProcessInfo, WindowInfo]:
+    def spawn_with_window(self, args: list[str] = None, timeout: float = 10.0) -> tuple[ProcessInfo, BaseWindow]:
         """Spawn and wait for window."""
         proc_info = self.spawn(args)
-        win_info = self.wait_for_window(timeout)
-        return proc_info, win_info
+        window = self.wait_for_window(timeout)
+        return proc_info, window
 
     def terminate(self, force: bool = False, timeout: float = 5.0) -> None:
         """Terminate process and clear window."""
