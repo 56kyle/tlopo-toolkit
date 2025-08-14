@@ -131,13 +131,5 @@ def get_and_display_board() -> None:
                 img[int(point.y), int(point.x), : ] = [0, 255, 0]
 
 
-
-def solve():
-    pass
-
-
-
-
-
 if __name__ == "__main__":
     get_and_display_board()

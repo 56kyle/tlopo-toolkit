@@ -1,69 +1,22 @@
 """Module containing logic for interacting with the potion brewing minigame's interface."""
 
-from math import floor
 from typing import Optional
 from typing import Union
 
 import cv2
 import numpy as np
-import pywinctl
-import shapely
-import win32gui
 from PIL.Image import Image
-from PIL.Image import fromarray
-from window_input import Window
 
-from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
 from tlopo_toolkit.util import as_cv_img
 from tlopo_toolkit.util import find_window_by_title
-from tlopo_toolkit.util import get_client_dimensions
-from tlopo_toolkit.util import get_client_rect
 from tlopo_toolkit.util import screenshot_window
-from tlopo_toolkit.util import screenshot_window_from_title
 
 
 PIECE_WINDOW_WIDTH_RATIO: float = 91 / 1936
 PIECE_WINDOW_HEIGHT_RATIO: float = 81 / 1056
 
 PLAY_AREA_OFFSET_RATIO_OF_HALF: float = 66 / 678
-
-
-def draw_bounding_box(img: np.ndarray, rect: Rect) -> np.ndarray:
-    """Draws a bounding box on the given image."""
-    new_img: np.ndarray = np.copy(img)
-    if len(new_img.shape) == 2:
-        new_img = cv2.cvtColor(new_img, cv2.COLOR_GRAY2BGR)
-
-    rect_img: np.ndarray = cv2.rectangle(new_img, (rect.x, rect.y), (rect.right, rect.bottom), (0, 255, 0), 1)
-    return rect_img
-
-
-def show(img: np.ndarray) -> None:
-    """Shows the given image."""
-    cv2.imshow("Image", img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
-def exit_minigame() -> None:
-    """Exits the potion brewing minigame."""
-    raise NotImplementedError
-
-
-def get_scaled_reference_image(window: Window, img: np.ndarray) -> np.ndarray:
-    """Returns the scaled reference image."""
-    window: Window = Window(hwnd="The Legend of Pirates Online [BETA]")
-    left, top, right, bottom = win32gui.GetWindowRect(window.hwnd)
-    width: int = right - left
-    height: int = bottom - top
-    ref_width: int = round(width * PIECE_WINDOW_WIDTH_RATIO)
-    ref_height: int = round(height * PIECE_WINDOW_HEIGHT_RATIO)
-    return cv2.resize(
-        img,
-        (ref_width, ref_height),
-        interpolation=cv2.INTER_LINEAR,
-    )
 
 
 def get_minigame_img(hwnd: int) -> np.ndarray:
@@ -214,11 +167,6 @@ def get_board_rect(image: Union[Image, np.ndarray]) -> Rect:
     return Rect(crop_x, crop_y, crop_w, crop_h)
 
 
-def crop_board_from_rect(img: np.ndarray, rect: Rect) -> np.ndarray:
-    """Crops the board from the given image."""
-    return img[rect.y : rect.bottom, rect.x : rect.right]
-
-
 if __name__ == "__main__":
     # img: Image = screenshot_window_from_title("The Legend of Pirates Online [BETA]")
     hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
@@ -227,43 +175,3 @@ if __name__ == "__main__":
     img: np.ndarray = get_minigame_img(hwnd=hwnd)
 
     crop_hexagonal_board(img).show()
-
-    # xp = (img.size[0] // 2) // 9
-    # yp = (img.size[1] // 2) // 9
-
-    # xp = img.size[0] - round((img.size[0] // 2) * PLAY_AREA_OFFSET_RATIO_OF_HALF)
-    # yp = img.size[1] - round((img.size[1] // 2) * PLAY_AREA_OFFSET_RATIO_OF_HALF)
-    #
-    # xi = img.size[0] // 2
-    # for y in range(img.size[1] // 2, img.size[1], yp):
-    #     for xi in range(img.size[0]):
-    #         img.putpixel((xi, y), (255, 0, 0))
-    # for x in range(img.size[0] // 2, img.size[0], xp):
-    #     for yi in range(img.size[1]):
-    #         img.putpixel((x, yi), (255, 0, 0))
-    # img.show()
-
-    # window: Window = Window(hwnd="The Legend of Pirates Online [BETA]")
-    # path: Path = Path(r"C:\Users\56kyl\source\repos\tlopo-toolkit\data\example.PNG")
-    # ref_path: Path = Path(r"C:\Users\56kyl\source\repos\tlopo-toolkit\data\reference\blue_0_clear.png")
-    # img: np.ndarray = cv2.imread(str(path))
-    # ref_img: np.ndarray = cv2.imread(str(ref_path))
-    # scaled_ref_img: np.ndarray = get_scaled_reference_image(window, img=ref_img)
-    # boxes: Iterable[Rect] = pyscreeze.locateAll(scaled_ref_img, img, grayscale=False, confidence=0.7)
-    # for box in boxes:
-    #     img = draw_bounding_box(img, Rect(*box))
-    # show(scaled_ref_img)
-    # show(img)
-
-    # mask: np.ndarray = cv2.inRange(img, np.array([160, 160, 160]), np.array([255, 255, 255]))
-    # contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # output = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
-    # show(output)
-
-    # path: Path = Path(r"C:\Users\56kyl\source\repos\tlopo-toolkit\data\reference\blue_0.PNG")
-    # path: Path = Path(r"C:\Users\56kyl\source\repos\tlopo-toolkit\data\example.PNG")
-    # img: np.ndarray = cv2.imread(str(path))
-    # mask: np.ndarray = cv2.inRange(img, np.array([160, 160, 160]), np.array([255, 255, 255]))
-    # contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # output = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
-    # show(output)
