@@ -835,6 +835,14 @@ wheels = [
 ]
 
 [[package]]
+name = "mouse"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/cc/4a30b48913a3bdaa3f713a160517792f829a1703257fb0869e76f945a760/mouse-0.7.1-py2.py3-none-any.whl", hash = "sha256:d34bb9548890089fcb11988400e26f55c624e6c7b741fff75fedfdfbd37c0016", size = 16170, upload-time = "2020-01-01T16:51:33.438Z" },
+]
+
+[[package]]
 name = "msgpack"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5008,6 +5016,7 @@ source = { editable = "." }
 dependencies = [
     { name = "keyring" },
     { name = "loguru" },
+    { name = "mouse" },
     { name = "opencv-python" },
     { name = "platformdirs" },
     { name = "psutil" },
@@ -5049,6 +5058,7 @@ docs = [
 requires-dist = [
     { name = "keyring", specifier = ">=25.6.0" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "mouse", specifier = ">=0.7.1" },
     { name = "opencv-python", specifier = ">=4.12.0.88" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "psutil", specifier = ">=7.0.0" },

@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [
     "keyring>=25.6.0",
     "loguru>=0.7.3",
+    "mouse>=0.7.1",
     "opencv-python>=4.12.0.88",
     "platformdirs>=4.3.8",
     "psutil>=7.0.0",
