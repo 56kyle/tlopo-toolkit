@@ -1,7 +1,8 @@
 import subprocess
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Generator, Optional
 
 import psutil
 
@@ -20,11 +21,11 @@ class Executable:
         return self.working_directory or self.path.parent
 
 
-def spawn_process(executable: Executable, args: list[str] = None) -> psutil.Process:
+def spawn_process(executable: Executable, args: Optional[list[str]] = None) -> psutil.Process:
     """Spawn a new process from executable."""
-    cmd = [str(executable.path)] + (args or [])
+    cmd: list[str] = [str(executable.path)] + (args or [])
     try:
-        proc = subprocess.Popen(cmd, cwd=executable.cwd)
+        proc: subprocess.Popen[bytes] = subprocess.Popen(cmd, cwd=executable.cwd)
         return psutil.Process(proc.pid)
     except (OSError, subprocess.SubprocessError) as e:
         raise ProcessSpawnError(f"Failed to spawn: {e}") from e
@@ -47,3 +48,18 @@ def terminate_process(process: psutil.Process, force: bool = False, timeout: flo
                 process.wait(2.0)
     except psutil.TimeoutExpired as e:
         raise ProcessTerminationError(f"Termination timeout: {e}") from e
+
+
+@contextmanager
+def managed_process(
+    executable: Executable, 
+    args: Optional[list[str]] = None, 
+    force: bool = False, 
+    timeout: float = 5.0
+) -> Generator[psutil.Process, None, None]:
+    """Context manager for process lifecycle."""
+    process: psutil.Process = spawn_process(executable, args)
+    try:
+        yield process
+    finally:
+        terminate_process(process, force, timeout)
