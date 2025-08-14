@@ -1,22 +1,13 @@
 """Module containing logic for interacting with a particular instance of TLOPO."""
-import multiprocessing
-import subprocess
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar
-from typing import Generator
+from typing import Optional
 
-from _win32typing import PyHANDLE
 from keyring import get_password
-from pywinctl import getAllWindows
-from pywinctl._main import BaseWindow
 from typing_extensions import Self
 
 from tlopo_toolkit.application import Application
-from tlopo_toolkit.config import Config
-from tlopo_toolkit.config import load_config
-from tlopo_toolkit.util import get_window_from_pid
+from tlopo_toolkit.config import Config, load_config
 
 
 config: Config = load_config()
@@ -24,8 +15,7 @@ config: Config = load_config()
 
 @dataclass(frozen=True)
 class Credential:
-    """Class representing a TLOPO account's credentials."""
-
+    """TLOPO account credentials."""
     username: str
     password: str
 
@@ -41,39 +31,78 @@ class Credential:
 
 @dataclass(frozen=True)
 class Pirate:
-    """Class representing a TLOPO account's pirate."""
-
+    """TLOPO pirate character."""
     name: str
 
 
 @dataclass(frozen=True)
 class Account:
-    """Class representing a TLOPO account."""
-
+    """TLOPO account."""
     credential: Credential
 
 
 @dataclass(frozen=True)
 class Server:
-    """Class representing a particular instance of TLOPO's game server."""
-
+    """TLOPO game server."""
     name: str
 
 
 @dataclass(frozen=True)
-class Client(Application):
-    """Class representing a particular instance of TLOPO."""
+class Client:
+    """TLOPO client instance."""
     account: Account
+    application
+
+    def __init__(self, account: Account, executable_path: Optional[Path] = None):
+        self.account = account
+        self._application = Application(executable_path or config.game_folder / "TLOPO.exe")
+
+    @property
+    def application(self) -> Application:
+        """Get the underlying application."""
+        return self._application
+
+    def spawn(self, command_args: list[str] = None):
+        """Spawn the TLOPO client."""
+        return self._application.spawn(command_args)
+
+    def terminate(self, force: bool = False, timeout: float = 5.0):
+        """Terminate the TLOPO client."""
+        self._application.terminate(force, timeout)
+
+    @property
+    def is_running(self) -> bool:
+        """Check if client is running."""
+        return self._application.is_running
 
 
-@dataclass(frozen=True)
-class Launcher(Application):
-    """Class representing a particular instance of TLOPO's launcher."""
+class Launcher:
+    """TLOPO launcher instance."""
+
+    def __init__(self, executable_path: Optional[Path] = None):
+        self._application = Application(executable_path or config.game_folder / "Launcher.exe")
+
+    @property
+    def application(self) -> Application:
+        """Get the underlying application."""
+        return self._application
+
+    def spawn(self, command_args: list[str] = None):
+        """Spawn the TLOPO launcher."""
+        return self._application.spawn(command_args)
+
+    def terminate(self, force: bool = False, timeout: float = 5.0):
+        """Terminate the TLOPO launcher."""
+        self._application.terminate(force, timeout)
+
+    @property
+    def is_running(self) -> bool:
+        """Check if launcher is running."""
+        return self._application.is_running
 
 
 @dataclass(frozen=True)
 class Game:
-    """Class representing a particular instance of TLOPO's game session."""
-
+    """TLOPO game session."""
     client: Client
     server: Server
