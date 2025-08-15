@@ -1,28 +1,18 @@
 import math
 from dataclasses import dataclass
-from functools import cached_property
 from typing import ClassVar
 from typing import Generic
 from typing import Literal
-from typing import NamedTuple
 from typing import Optional
 from typing import TypeVar
-from typing import Union
 
 import cv2
 import numpy as np
+from shapely import Point
 from typing_extensions import Self
 
 
 T: TypeVar = TypeVar("T")
-
-
-@dataclass(frozen=True)
-class Point:
-    __slots__: ClassVar[list[str]] = ["x", "y"]
-
-    x: float
-    y: float
 
 
 @dataclass(frozen=True)
@@ -399,7 +389,7 @@ def polygon_lines(layout: Layout, h: Hex) -> set[Point]:
 
     for segment in lines:
         for point in linear_interpolate_points(segment[0], segment[1]):
-            points.add(Point(*point))
+            points.add(Point(point))
 
     return points
 

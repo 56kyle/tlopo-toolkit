@@ -15,13 +15,12 @@ import numpy as np
 from PIL.Image import Image
 from PIL.Image import fromarray
 from cv2.aruco import Board
-
+from shapely import Point
 
 from tlopo_toolkit.geometry import Hex
 from tlopo_toolkit.geometry import Layout
 from tlopo_toolkit.geometry import ORIENTATION_FLAT
 from tlopo_toolkit.geometry import OffsetCoord
-from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
 
 from tlopo_toolkit.geometry import polygon_lines

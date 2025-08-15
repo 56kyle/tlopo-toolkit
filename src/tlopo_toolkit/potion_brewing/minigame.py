@@ -4,12 +4,11 @@ from typing import Optional
 from typing import cast
 
 import mouse
+from shapely import Point
 from window_input import Window
 
 from tlopo_toolkit.geometry import Hex
-from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import hex_to_pixel
-from tlopo_toolkit.mouse import mouse_move
 from tlopo_toolkit.potion_brewing.board import Board
 from tlopo_toolkit.potion_brewing.board import get_board_from_window
 from tlopo_toolkit.potion_brewing.piece import Piece
