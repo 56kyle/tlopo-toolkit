@@ -45,22 +45,22 @@ class Rect:
 
 @dataclass(frozen=True)
 class Region:
-    """Represents a Rectangle Region in a larger image."""
+    """Represents a Rectangle Region in a larger img."""
 
-    image: np.ndarray
+    img: np.ndarray
     rect: Rect
 
-    __slots__: ClassVar[list[str]] = ["image", "rect"]
+    __slots__: ClassVar[list[str]] = ["img", "rect"]
 
     def crop_absolute(self, rect: Rect) -> Self:
-        """Crops the internal region relative to the image."""
-        return Region(image=self.image, rect=rect)
+        """Crops the internal region relative to the img."""
+        return Region(img=self.img, rect=rect)
 
     def crop_relative(self, rect: Rect) -> Self:
         """Crops the internal region to itself."""
 
         return Region(
-            image=self.image,
+            img=self.img,
             rect=Rect(
                 x=self.rect.x + rect.x,
                 y=self.rect.y + rect.y,
@@ -71,10 +71,10 @@ class Region:
 
     def export(self) -> np.ndarray:
         """Exports the internal region as a numpy array."""
-        return self.image[self.rect.top : self.rect.bottom, self.rect.left : self.rect.right]
+        return self.img[self.rect.top: self.rect.bottom, self.rect.left: self.rect.right]
 
     def show(self) -> None:
-        new_img: np.ndarray = np.copy(self.image)
+        new_img: np.ndarray = np.copy(self.img)
         if len(new_img.shape) == 2:
             new_img = cv2.cvtColor(new_img, cv2.COLOR_GRAY2BGR)
 

@@ -8,12 +8,14 @@ from shapely import Point
 from window_input import Window
 
 from tlopo_toolkit.geometry import Hex
+from tlopo_toolkit.geometry import Rect
 from tlopo_toolkit.geometry import hex_to_pixel
 from tlopo_toolkit.potion_brewing.board import Board
 from tlopo_toolkit.potion_brewing.board import get_board_from_window
 from tlopo_toolkit.potion_brewing.piece import Piece
 from tlopo_toolkit.potion_brewing.piece import PlacementPair
 from tlopo_toolkit.util import find_window_by_title
+from tlopo_toolkit.util import get_client_rect
 
 
 def setup_minigame() -> None:
@@ -22,6 +24,7 @@ def setup_minigame() -> None:
 
 def get_initial_state(hwnd: int) -> None:
     window: Window = Window(hwnd=hwnd)
+    client_rect: Rect = get_client_rect(hwnd=hwnd)
     board: Board = get_board_from_window(hwnd=hwnd)
     pieces: set[Piece] = set()
     current_pair: PlacementPair = _get_current_placement_pair(window=window, board=board)

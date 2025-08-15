@@ -182,3 +182,4 @@ if __name__ == "__main__":
     launcher: FakeLauncher = FakeLauncher()
     Client.prepare_client_launch(Credential.from_keyring(config.keyring_service, account_list[0]))
     client: Client = Client.spawn()
+    client.window.maximize()

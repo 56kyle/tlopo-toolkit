@@ -5,9 +5,12 @@ from typing import Union
 
 import cv2
 import numpy as np
+import win32gui
 from PIL.Image import Image
+from PIL.Image import fromarray
 
 from tlopo_toolkit.geometry import Rect
+from tlopo_toolkit.geometry import Region
 from tlopo_toolkit.util import as_cv_img
 from tlopo_toolkit.util import find_window_by_title
 from tlopo_toolkit.util import screenshot_client
@@ -19,36 +22,46 @@ PIECE_WINDOW_HEIGHT_RATIO: float = 81 / 1056
 PLAY_AREA_OFFSET_RATIO_OF_HALF: float = 66 / 678
 
 
-def get_minigame_img(hwnd: int) -> np.ndarray:
-    """Returns an image of the game area."""
-    img: Optional[Image] = screenshot_client(hwnd=hwnd)
-    if img is None:
-        raise ValueError("No image found.")
-    img_arr: np.ndarray = np.array(img)
-    bgr: np.ndarray = cv2.cvtColor(img_arr, cv2.COLOR_RGB2BGR)
-    return crop_to_minigame_img(bgr)
+
+def get_client_region(hwnd: int) -> Region:
+    """Returns a region of the client area."""
+    client_img: np.ndarray = screenshot_client(hwnd=hwnd)
+    client_rect: Rect = get_client_rect(hwnd=hwnd)
+    return Region(
+        img=client_img,
+        rect=client_rect
+    )
 
 
-def crop_to_minigame_img(img: np.ndarray) -> np.ndarray:
-    """Crops the given image to the minigame area."""
+def get_client_rect(hwnd: int) -> Rect:
+    """Returns a rectangle of the client area."""
+    left, top, right, bottom = win32gui.GetClientRect(hwnd)
+    return Rect(left, top, right - left, bottom - top)
 
-    y_half: int = img.shape[0] // 2
-    row_sums: np.ndarray = img[y_half].sum(axis=1)
+
+
+def get_minigame_region(hwnd: int) -> Region:
+    """Returns a region of the game area."""
+    client_region: Region = get_client_region(hwnd=hwnd)
+    y_half: int = client_region.img.shape[0] // 2
+    row_sums: np.ndarray = client_region.img[y_half].sum(axis=1)
 
     midpoint: int = len(row_sums) // 2
     left_bar_width: int = sum(np.array(row_sums[:midpoint] == 0))
     right_bar_width: int = sum(np.array(row_sums[midpoint:] == 0))
 
-    xi: int = left_bar_width
-    xf: int = img.shape[1] - right_bar_width
-    yi: int = 0
-    yf: int = img.shape[0]
-
-    return img[yi:yf, xi:xf]
+    return client_region.crop_relative(
+        rect=Rect(
+            x=left_bar_width,
+            y=0,
+            w=client_region.rect.w - (left_bar_width + right_bar_width),
+            h=client_region.rect.h
+        )
+    )
 
 
 def find_board_range_x(bottom_half_section):
-    """Use the bottom half of the image to find horizontal bounds using most common x coordinate."""
+    """Use the bottom half of the img to find horizontal bounds using most common x coordinate."""
     h: int
     w: int
     print(bottom_half_section.shape)
@@ -146,17 +159,17 @@ def get_board_rect(image: Union[Image, np.ndarray]) -> Rect:
     h: int
     w: int
     h, w = img.shape[:2]
-    # Bottom half of image height, but also halve the width (right half) - for X detection
+    # Bottom half of img height, but also halve the width (right half) - for X detection
     bottom_half_start: int = h // 2
     width_half_start: int = w // 2
     bottom_half_section: np.ndarray = img[bottom_half_start:, width_half_start:]
-    # Board area starts at roughly 3/4 width (right quarter of image) - for Y detection
+    # Board area starts at roughly 3/4 width (right quarter of img) - for Y detection
     board_area_start: int = int(w * 0.75)
     board_right_section: np.ndarray = img[:, board_area_start:]
     # Find the board boundaries
     board_left, board_right = find_board_range_x(bottom_half_section)
     board_top, board_bottom = find_board_range_y(board_right_section)
-    # Adjust coordinates back to full image
+    # Adjust coordinates back to full img
     board_left += width_half_start
     board_right += width_half_start
 
@@ -172,6 +185,6 @@ if __name__ == "__main__":
     hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
     if hwnd is None:
         raise ValueError("No window found.")
-    img: np.ndarray = get_minigame_img(hwnd=hwnd)
+    minigame_region: Region = get_minigame_region(hwnd=hwnd)
 
-    crop_hexagonal_board(img).show()
+    fromarray(crop_hexagonal_board(minigame_region.export())).show()

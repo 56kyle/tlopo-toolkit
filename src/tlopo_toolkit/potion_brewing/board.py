@@ -66,7 +66,7 @@ def get_board_from_window(hwnd: int) -> Board:
 
 
 def get_board_from_image(img: Union[Image, np.ndarray]) -> Board:
-    """Returns the potion brewing minigame's board geometry from the given image."""
+    """Returns the potion brewing minigame's board geometry from the given img."""
     img: np.ndarray = as_cv_img(img=img)
     board_rect: Rect = get_board_rect(img)
     return get_board_from_bounds(rect=board_rect)

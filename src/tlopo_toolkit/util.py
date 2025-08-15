@@ -1,10 +1,6 @@
-import subprocess
 from contextlib import contextmanager
 from contextlib import suppress
-from math import floor
-from pathlib import Path
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
 import cv2
@@ -13,7 +9,6 @@ import win32con
 import win32gui
 import win32ui
 from PIL.Image import Image
-from PIL.Image import fromarray
 from pywinctl import getAllWindows
 from pywinctl._main import BaseWindow
 
@@ -42,31 +37,22 @@ def find_window_by_title(title: str) -> Optional[int]:
     return result[0] if result else None
 
 
-def get_client_dimensions(hwnd: int) -> Tuple[int, int]:
-    """Calculate client area dimensions from window handle."""
-    try:
-        _, _, width, height = win32gui.GetClientRect(hwnd)
-        return max(0, width), max(0, height)
-    except:
-        return 0, 0
-
-
 def get_client_rect(hwnd: int) -> Rect:
     """Returns the client Rect."""
     left, top, right, bottom = win32gui.GetClientRect(hwnd)
     return Rect(left, top, right - left, bottom - top)
 
 
-def array_to_image(bitmap_data: bytes, width: int, height: int) -> Optional[Image]:
-    """Convert BGRA bitmap bytes to RGB PIL Image."""
+def array_to_bgr(bitmap_data: bytes, width: int, height: int) -> Optional[np.ndarray]:
+    """Convert BGRA bitmap bytes to BGR numpy array."""
     try:
         expected_size = width * height * 4
         if len(bitmap_data) < expected_size or width <= 0 or height <= 0:
             return None
 
         array = np.frombuffer(bitmap_data, dtype=np.uint8)
-        array = array.reshape((height, width, 4))[:, :, :3][:, :, ::-1]
-        return fromarray(array)
+        array = array.reshape((height, width, 4))[:, :, :3]
+        return array  # Already in BGR format since input is BGRA
     except:
         return None
 
@@ -141,22 +127,22 @@ def is_bitmap_valid(bitmap_data: bytes, width: int, height: int) -> bool:
         return False
 
 
-def screenshot_window_from_title(window_title: str) -> Optional[Image]:
+def screenshot_window_from_title(window_title: str) -> np.ndarray:
     """Capture complete window client area including offscreen content."""
     hwnd: int = find_window_by_title(window_title)
     if not hwnd or not win32gui.IsWindow(hwnd):
-        return None
+        raise ValueError("No window found.")
     return screenshot_client(hwnd)
 
 
-def screenshot_client(hwnd: int) -> Optional[Image]:
-    width, height = get_client_dimensions(hwnd)
-    if width <= 0 or height <= 0:
-        return None
+def screenshot_client(hwnd: int) -> np.ndarray:
+    rect: Rect = get_client_rect(hwnd)
+    if rect.w <= 0 or rect.h <= 0:
+        raise ValueError("Invalid window client rect.")
 
-    with memory_dc_context(width, height) as (memory_dc, bitmap):
+    with memory_dc_context(rect.w, rect.h) as (memory_dc, bitmap):
         if not memory_dc or not bitmap:
-            return None
+            raise ValueError("Could not create memory device context.")
 
         dc_handle = memory_dc.GetSafeHdc()
 
@@ -165,14 +151,14 @@ def screenshot_client(hwnd: int) -> Optional[Image]:
 
         # Fallback to BitBlt if PrintWindow fails
         if not success:
-            success = try_legacy_bitblt_capture(hwnd, memory_dc, width, height)
+            success = try_legacy_bitblt_capture(hwnd, memory_dc, rect.w, rect.h)
 
         if success:
             bitmap_data = extract_bitmap_data(bitmap)
-            if is_bitmap_valid(bitmap_data, width, height):
-                return array_to_image(bitmap_data, width, height)
+            if is_bitmap_valid(bitmap_data, rect.w, rect.h):
+                return array_to_bgr(bitmap_data, rect.w, rect.h)
 
-    return None
+    raise ValueError("Could not capture window client area.")
 
 
 def as_cv_img(img: Union[Image, np.ndarray]) -> np.ndarray:

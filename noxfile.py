@@ -169,13 +169,13 @@ def build_python(session: Session) -> None:
 
 @nox.session(python=False, name="build-container", tags=[BUILD])
 def build_container(session: Session) -> None:
-    """Build the Docker container image.
+    """Build the Docker container img.
 
     Requires Docker or Podman installed and running on the host.
     Ensures core project dependencies are synced in the current environment
     *before* the build context is prepared.
     """
-    session.log("Building application container image...")
+    session.log("Building application container img...")
     try:
         session.run("docker", "info", success_codes=[0], external=True, silent=True)
         container_cli = "docker"
@@ -191,7 +191,7 @@ def build_container(session: Session) -> None:
     session.log(f"Ensuring core dependencies are synced in {current_dir.resolve()} for build context...")
     session.install("-e", ".")
 
-    session.log(f"Building Docker image using {container_cli}.")
+    session.log(f"Building Docker img using {container_cli}.")
     project_image_name = PACKAGE_NAME.replace("_", "-").lower()
     session.run(
         container_cli,
@@ -203,7 +203,7 @@ def build_container(session: Session) -> None:
         external=True,
     )
 
-    session.log(f"Container image {project_image_name}:latest built locally.")
+    session.log(f"Container img {project_image_name}:latest built locally.")
 
 
 @nox.session(python=False, name="setup-release", tags=[RELEASE])
