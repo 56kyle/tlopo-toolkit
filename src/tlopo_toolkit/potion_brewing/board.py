@@ -22,11 +22,12 @@ from tlopo_toolkit.geometry import Layout
 from tlopo_toolkit.geometry import ORIENTATION_FLAT
 from tlopo_toolkit.geometry import OffsetCoord
 from tlopo_toolkit.geometry import Rect
+from tlopo_toolkit.geometry import Region
 
 from tlopo_toolkit.geometry import polygon_lines
 from tlopo_toolkit.geometry import qoffset_to_cube
 from tlopo_toolkit.potion_brewing.interface import get_board_rect
-from tlopo_toolkit.potion_brewing.interface import get_minigame_img
+from tlopo_toolkit.potion_brewing.interface import get_minigame_region
 from tlopo_toolkit.util import as_cv_img
 from tlopo_toolkit.util import find_window_by_title
 
@@ -61,8 +62,8 @@ class Board:
 
 def get_board_from_window(hwnd: int) -> Board:
     """Returns the potion brewing minigame's board geometry from the given window handle."""
-    minigame_img: np.ndarray = get_minigame_img(hwnd=hwnd)
-    return get_board_from_image(img=minigame_img)
+    minigame_region: Region = get_minigame_region(hwnd=hwnd)
+    return get_board_from_image(img=minigame_region.export())
 
 
 def get_board_from_image(img: Union[Image, np.ndarray]) -> Board:
@@ -109,7 +110,9 @@ def get_and_display_board() -> None:
     This mainly just exists for debugging purposes.
     """
     hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
-    img: np.ndarray = get_minigame_img(hwnd=hwnd)
+    minigame_region: Region = get_minigame_region(hwnd=hwnd)
+
+    img: np.ndarray = np.copy(minigame_region.export())
 
     board_rect: Rect = get_board_rect(image=img)
     board: Board = get_board_from_bounds(rect=board_rect)
