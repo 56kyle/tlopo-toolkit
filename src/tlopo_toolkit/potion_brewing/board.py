@@ -1,4 +1,5 @@
 """Module containing logic for interacting with the potion brewing minigame's board."""
+
 import math
 from dataclasses import dataclass
 from functools import cached_property
@@ -12,6 +13,7 @@ import cv2
 import numpy as np
 
 from PIL.Image import Image
+from PIL.Image import fromarray
 from cv2.aruco import Board
 
 
@@ -63,10 +65,8 @@ class Board:
 
 def get_board_from_window(hwnd: int) -> Board:
     """Returns the potion brewing minigame's board geometry from the given window handle."""
-    client_rect: Rect = get_client_rect(hwnd=hwnd)
     minigame_img: np.ndarray = get_minigame_img(hwnd=hwnd)
-
-    return get_board_from_image(img=minigame_img, offset=)
+    return get_board_from_image(img=minigame_img)
 
 
 def get_board_from_image(img: Union[Image, np.ndarray]) -> Board:
@@ -81,11 +81,7 @@ def get_board_from_bounds(rect: Rect) -> Board:
     layout: Layout = get_layout_from_bounds(rect=rect)
     hex_grid: np.ndarray[tuple[10, 8], np.dtype[Hex]] = build_hex_grid()
 
-    return Board(
-        layout=layout,
-        q_offset=-1,
-        grid=hex_grid
-    )
+    return Board(layout=layout, q_offset=-1, grid=hex_grid)
 
 
 def get_layout_from_bounds(rect: Rect) -> Layout:
@@ -128,7 +124,8 @@ def get_and_display_board() -> None:
             print(f"{x=}, {y=}")
             h: Hex = qoffset_to_cube(-1, offset)
             for point in polygon_lines(board.layout, h):
-                img[int(point.y), int(point.x), : ] = [0, 255, 0]
+                img[int(point.y), int(point.x), :] = [0, 255, 0]
+    fromarray(img).show()
 
 
 if __name__ == "__main__":

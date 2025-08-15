@@ -1,4 +1,6 @@
 """Module containing logic for interacting with a particular instance of TLOPO."""
+
+import multiprocessing
 import os
 import time
 from contextlib import contextmanager
@@ -30,6 +32,7 @@ config: Config = load_config()
 @dataclass(frozen=True)
 class Credential:
     """TLOPO account credentials."""
+
     username: str
     password: str
 
@@ -46,24 +49,28 @@ class Credential:
 @dataclass(frozen=True)
 class Pirate:
     """TLOPO pirate character."""
+
     name: str
 
 
 @dataclass(frozen=True)
 class Account:
     """TLOPO account."""
+
     credential: Credential
 
 
 @dataclass(frozen=True)
 class Server:
     """TLOPO game server."""
+
     name: str
 
 
 @dataclass(frozen=True)
 class Client(Application):
     """TLOPO client instance."""
+
     executable: ClassVar[Executable] = Executable(config.game_folder / "TLOPO.exe")
 
     @classmethod
@@ -84,7 +91,7 @@ class Client(Application):
             },
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
-            }
+            },
         )
         response.raise_for_status()
         login_response: LoginResponse = LoginResponse.model_validate(response.json())
@@ -115,9 +122,7 @@ class FakeLauncher:
     @contextmanager
     def login(self, account_name: str) -> Generator[Client, None, None]:
         """Login to TLOPO and return a Client instance."""
-        credential: Credential = Credential.from_keyring(
-            config.keyring_service, account_name
-        )
+        credential: Credential = Credential.from_keyring(config.keyring_service, account_name)
         with Client.login(credential) as client:
             yield client
 
@@ -125,6 +130,7 @@ class FakeLauncher:
 @dataclass(frozen=True)
 class Game:
     """TLOPO game session."""
+
     client: Client
     server: Server
 
@@ -163,11 +169,16 @@ def debug_logs(client: Optional[Client] = None) -> None:
                 print(key)
 
 
+def login_pool(account: str):
+    with launcher.login(account) as client:
+        time.sleep(10)
+        print(client.process.environ())
+
+
 if __name__ == "__main__":
     account_str: str = keyring.get_password(config.keyring_service, config.keyring_accounts_user)
     account_list: list[str] = account_str.split(", ") if ", " in account_str else [account_str]
 
-    for account in account_list:
-        with FakeLauncher().login(account_name=account) as client:
-            debug_logs(client)
-
+    launcher: FakeLauncher = FakeLauncher()
+    Client.prepare_client_launch(Credential.from_keyring(config.keyring_service, account_list[0]))
+    client: Client = Client.spawn()
