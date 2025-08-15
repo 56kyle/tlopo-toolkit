@@ -22,15 +22,11 @@ PIECE_WINDOW_HEIGHT_RATIO: float = 81 / 1056
 PLAY_AREA_OFFSET_RATIO_OF_HALF: float = 66 / 678
 
 
-
 def get_client_region(hwnd: int) -> Region:
     """Returns a region of the client area."""
     client_img: np.ndarray = screenshot_client(hwnd=hwnd)
     client_rect: Rect = get_client_rect(hwnd=hwnd)
-    return Region(
-        img=client_img,
-        rect=client_rect
-    )
+    return Region(img=client_img, rect=client_rect)
 
 
 def get_client_rect(hwnd: int) -> Rect:
@@ -39,10 +35,8 @@ def get_client_rect(hwnd: int) -> Rect:
     return Rect(left, top, right - left, bottom - top)
 
 
-
-def get_minigame_region(hwnd: int) -> Region:
+def get_minigame_region_from_client_region(client_region: Region) -> Region:
     """Returns a region of the game area."""
-    client_region: Region = get_client_region(hwnd=hwnd)
     y_half: int = client_region.img.shape[0] // 2
     row_sums: np.ndarray = client_region.img[y_half].sum(axis=1)
 
@@ -52,10 +46,7 @@ def get_minigame_region(hwnd: int) -> Region:
 
     return client_region.crop_relative(
         rect=Rect(
-            x=left_bar_width,
-            y=0,
-            w=client_region.rect.w - (left_bar_width + right_bar_width),
-            h=client_region.rect.h
+            x=left_bar_width, y=0, w=client_region.rect.w - (left_bar_width + right_bar_width), h=client_region.rect.h
         )
     )
 
@@ -154,6 +145,27 @@ def crop_hexagonal_board(image: Union[Image, np.ndarray]) -> np.ndarray:
     return cropped
 
 
+def get_board_region_from_minigame_region(minigame_region: Region) -> Region:
+    """Returns the board region from the given minigame region."""
+    minigame_img: np.ndarray = minigame_region.export()
+
+    board_right_edge_region: Region = _get_board_right_edge_region(minigame_region=minigame_region)
+    board_bottom_edge_region: Region = _get_board_bottom_edge_region(minigame_region=minigame_region)
+
+
+def _get_board_right_edge_region(minigame_region: Region) -> Region:
+    """Returns the region of the board right edge."""
+    dxi: int = int(minigame_region.rect.w * 0.75)
+    board_right_edge_region: Region = minigame_region.crop_relative(
+        rect=Rect(x=dxi, y=0, w=minigame_region.rect.w - dxi, h=minigame_region.rect.h)
+    )
+    return board_right_edge_region
+
+
+def _get_board_bottom_edge_region(minigame_region: Region) -> Region:
+    pass
+
+
 def get_board_rect(image: Union[Image, np.ndarray]) -> Rect:
     img: np.ndarray = as_cv_img(image)
     h: int
@@ -185,6 +197,7 @@ if __name__ == "__main__":
     hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
     if hwnd is None:
         raise ValueError("No window found.")
-    minigame_region: Region = get_minigame_region(hwnd=hwnd)
+    client_region: Region = get_client_region(hwnd=hwnd)
+    minigame_region: Region = get_minigame_region_from_client_region(client_region=client_region)
 
     fromarray(crop_hexagonal_board(minigame_region.export())).show()

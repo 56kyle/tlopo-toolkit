@@ -22,6 +22,7 @@ from tlopo_toolkit.application import Application
 from tlopo_toolkit.config import Config, load_config
 from tlopo_toolkit.constants import REPO_FOLDER
 from tlopo_toolkit.process import Executable
+from tlopo_toolkit.process import find_all_processes
 from tlopo_toolkit.process import find_process
 from tlopo_toolkit.log import logger, _LOG_FILE_STEM
 
@@ -75,8 +76,9 @@ class Client(Application):
 
     @classmethod
     @contextmanager
-    def login(cls, credential: Credential) -> Generator[Self, None, None]:
+    def login(cls, username: str) -> Generator[Self, None, None]:
         """Login to TLOPO and return a Client instance."""
+        credential: Credential = Credential.from_keyring(config.keyring_service, username)
         cls.prepare_client_launch(credential)
         with cls.managed() as client:
             yield client
@@ -122,8 +124,7 @@ class FakeLauncher:
     @contextmanager
     def login(self, account_name: str) -> Generator[Client, None, None]:
         """Login to TLOPO and return a Client instance."""
-        credential: Credential = Credential.from_keyring(config.keyring_service, account_name)
-        with Client.login(credential) as client:
+        with Client.login(account_name) as client:
             yield client
 
 

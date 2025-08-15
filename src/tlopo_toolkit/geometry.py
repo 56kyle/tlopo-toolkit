@@ -71,7 +71,7 @@ class Region:
 
     def export(self) -> np.ndarray:
         """Exports the internal region as a numpy array."""
-        return self.img[self.rect.top: self.rect.bottom, self.rect.left: self.rect.right]
+        return np.copy(self.img[self.rect.top : self.rect.bottom, self.rect.left : self.rect.right])
 
     def show(self) -> None:
         new_img: np.ndarray = np.copy(self.img)
