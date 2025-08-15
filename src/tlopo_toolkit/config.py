@@ -1,8 +1,7 @@
 """Module containing configuration logic used throughout the tlopo_toolkit package."""
-from pathlib import Path
+
 from typing import ClassVar
 
-import dotenv
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from pydantic import DirectoryPath
@@ -12,9 +11,9 @@ from pydantic_settings import SettingsConfigDict
 from tlopo_toolkit.constants import DEFAULT_PYDANTIC_SETTINGS_CONFIG
 
 
-
 class APIConfig(BaseModel):
     """Config for the TLOPO api."""
+
     login_url: str = "https://api.tlopo.com/login/"
 
 

@@ -1,30 +1,34 @@
 """Module containing logic for interacting with a particular instance of TLOPO."""
 
-import multiprocessing
 import os
 import time
 from contextlib import contextmanager
-from dataclasses import Field
 from dataclasses import dataclass
-from pathlib import Path
-from typing import ClassVar, Optional
+from typing import TYPE_CHECKING
+from typing import ClassVar
 from typing import Generator
-from urllib.parse import urlencode
+from typing import Optional
 
 import httpx
 import keyring
-import psutil
 from keyring import get_password
 from typing_extensions import Self
 
 from tlopo_toolkit.api.schema import LoginResponse
 from tlopo_toolkit.application import Application
-from tlopo_toolkit.config import Config, load_config
+from tlopo_toolkit.config import Config
+from tlopo_toolkit.config import load_config
 from tlopo_toolkit.constants import REPO_FOLDER
+from tlopo_toolkit.log import _LOG_FILE_STEM
+from tlopo_toolkit.log import logger
 from tlopo_toolkit.process import Executable
-from tlopo_toolkit.process import find_all_processes
 from tlopo_toolkit.process import find_process
-from tlopo_toolkit.log import logger, _LOG_FILE_STEM
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    import psutil
 
 
 config: Config = load_config()
@@ -144,7 +148,7 @@ def debug_logs(client: Optional[Client] = None) -> None:
     new_log: Path = REPO_FOLDER / f"{_LOG_FILE_STEM}.json"
     logger.add(new_log)
     try:
-        for i in range(100):
+        for _i in range(100):
             baseline: set[str] = set(os.environ.keys())
             logger.info("Launcher ===============================================")
             for key, value in process.environ().items():
@@ -161,11 +165,11 @@ def debug_logs(client: Optional[Client] = None) -> None:
                 client: Optional[Client] = Client.find()
             time.sleep(10)
     finally:
-        print(f"============== Launcher Diff ================")
+        print("============== Launcher Diff ================")
         for key in launcher_diff_found:
             print(key)
         if client:
-            print(f"============== Client Diff ================")
+            print("============== Client Diff ================")
             for key in client_diff_found:
                 print(key)
 

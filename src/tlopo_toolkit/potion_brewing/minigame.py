@@ -1,18 +1,9 @@
 """Module containing logic for interacting with the potion brewing minigame."""
 
 from typing import Optional
-from typing import cast
 
-import mouse
-from shapely import Point
-from window_input import Window
-
-from tlopo_toolkit.geometry import Hex
-from tlopo_toolkit.geometry import Rect
-from tlopo_toolkit.geometry import hex_to_pixel
 from tlopo_toolkit.potion_brewing.board import Board
-from tlopo_toolkit.potion_brewing.board import get_board_from_window
-from tlopo_toolkit.potion_brewing.piece import Piece
+from tlopo_toolkit.potion_brewing.board import get_client_board_from_window
 from tlopo_toolkit.potion_brewing.piece import PlacementPair
 from tlopo_toolkit.util import find_window_by_title
 from tlopo_toolkit.util import get_client_rect
@@ -23,22 +14,16 @@ def setup_minigame() -> None:
 
 
 def get_initial_state(hwnd: int) -> None:
-    window: Window = Window(hwnd=hwnd)
-    client_rect: Rect = get_client_rect(hwnd=hwnd)
-    board: Board = get_board_from_window(hwnd=hwnd)
-    pieces: set[Piece] = set()
-    current_pair: PlacementPair = _get_current_placement_pair(window=window, board=board)
+    """Gets the initial state of the minigame."""
+    get_client_rect(hwnd=hwnd)
+    client_board: Board = get_client_board_from_window(hwnd=hwnd)
+    client_board.to_screen_relative()
+
+    _get_current_placement_pair(hwnd=hwnd, board=client_board)
 
 
-def _get_current_placement_pair(window: Window, board: Board) -> PlacementPair:
-    top_left_corner: Hex = cast(Hex, board.grid[0, 0])
-    point: Point = hex_to_pixel(layout=board.layout, h=top_left_corner)
-    x: int = int(point.x)
-    y: int = int(point.y)
-    print(point)
-    print(window.pixel(x, y))
-    mouse.move(x, y)
-    # mouse_move(window.hwnd, int(point.x), int(point.y))
+def _get_current_placement_pair(hwnd: int, board: Board) -> PlacementPair:
+    pass
 
 
 if __name__ == "__main__":

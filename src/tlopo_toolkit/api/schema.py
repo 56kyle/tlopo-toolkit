@@ -1,14 +1,14 @@
 """Module containing schemas modeling the TLOPO API."""
+
 from datetime import datetime
-from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
 
 
-
 class Fleet(BaseModel):
     """Schema representing a single Fleet in the TLOPO Ocean API."""
+
     type: str
     state: str
     started: int
@@ -17,6 +17,7 @@ class Fleet(BaseModel):
 
 class Invasion(BaseModel):
     """Schema representing a single Invasion in the TLOPO Ocean API."""
+
     started: int
     num_players: int = Field(alias="numPlayers")
     phase: int
@@ -26,6 +27,7 @@ class Invasion(BaseModel):
 
 class Ocean(BaseModel):
     """Schema representing a single Ocean in the TLOPO Ocean API."""
+
     available: bool
     name: str
     created: datetime
@@ -36,6 +38,7 @@ class Ocean(BaseModel):
 
 class LoginResponse(BaseModel):
     """Schema representing a single Login in the TLOPO Ocean API."""
+
     status: int
     message: str
     token: str

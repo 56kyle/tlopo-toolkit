@@ -2,11 +2,13 @@ import subprocess
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Generator
+from typing import Optional
 
 import psutil
 
-from tlopo_toolkit.exceptions import ProcessSpawnError, ProcessTerminationError
+from tlopo_toolkit.exceptions import ProcessSpawnError
+from tlopo_toolkit.exceptions import ProcessTerminationError
 
 
 @dataclass(frozen=True)
@@ -38,7 +40,7 @@ def find_process(executable: Executable) -> Optional[psutil.Process]:
         try:
             if Path(process.exe()) == executable.path:
                 return process
-        except psutil.AccessDenied as e:
+        except psutil.AccessDenied:
             pass
     return None
 
@@ -50,7 +52,7 @@ def find_all_processes(executable: Executable) -> list[psutil.Process]:
         try:
             if Path(process.exe()) == executable.path:
                 processes.append(process)
-        except psutil.AccessDenied as e:
+        except psutil.AccessDenied:
             pass
     return processes
 

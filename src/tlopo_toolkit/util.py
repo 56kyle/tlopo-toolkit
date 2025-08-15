@@ -51,8 +51,7 @@ def array_to_bgr(bitmap_data: bytes, width: int, height: int) -> Optional[np.nda
             return None
 
         array = np.frombuffer(bitmap_data, dtype=np.uint8)
-        array = array.reshape((height, width, 4))[:, :, :3]
-        return array  # Already in BGR format since input is BGRA
+        return array.reshape((height, width, 4))[:, :, :3]
     except:
         return None
 

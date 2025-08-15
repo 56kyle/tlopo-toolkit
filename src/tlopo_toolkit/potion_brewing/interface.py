@@ -1,18 +1,16 @@
 """Module containing logic for interacting with the potion brewing minigame's interface."""
 
-from typing import Optional
+from typing import Literal
 from typing import Union
 
 import cv2
 import numpy as np
 import win32gui
 from PIL.Image import Image
-from PIL.Image import fromarray
 
 from tlopo_toolkit.geometry import Rect
 from tlopo_toolkit.geometry import Region
 from tlopo_toolkit.util import as_cv_img
-from tlopo_toolkit.util import find_window_by_title
 from tlopo_toolkit.util import screenshot_client
 
 
@@ -51,33 +49,24 @@ def get_minigame_region_from_client_region(client_region: Region) -> Region:
     )
 
 
-def find_board_range_x(bottom_half_section):
+def find_board_range_x(bottom_half_section: np.ndarray):
     """Use the bottom half of the img to find horizontal bounds using most common x coordinate."""
     h: int
     w: int
     print(bottom_half_section.shape)
-    h, w = bottom_half_section.shape[:2]
     gray: np.ndarray = cv2.cvtColor(bottom_half_section, cv2.COLOR_BGR2LAB)
-
-    # Use larger kernel size for much better edge detection
     blurred: np.ndarray = cv2.GaussianBlur(gray, (9, 9), 3.2)
     edges: np.ndarray = cv2.Canny(blurred, 30, 120)
-
-    # Sum edge pixels along each column to get x-coordinate counts
     x_counts: np.ndarray = edges.astype(bool, copy=True).sum(axis=0)
     print(x_counts)
 
-    w_half = w // 2
-    # dxi_inner: int = int(np.argmax(x_counts[:w_half]))
-    # dxf_inner: int = int(np.argmax(x_counts[w_half:])) + w_half
+    dxi_inner, dxf_inner = _find_bounds_from_sums(x_counts)
 
-    dxi_inner, dxf_inner = find_outer_bounds(x_counts)
+    dxf_inner - dxi_inner
+    # hex_outer: float = 0 * dx_inner / 5.75
 
-    dx_inner: int = dxf_inner - dxi_inner
-    hex_outer: float = 0 * dx_inner / 5.75
-
-    dxi: int = round(dxi_inner - (hex_outer / 4))
-    dxf: int = round(dxf_inner + (hex_outer / 4))
+    dxi: int = round(dxi_inner)
+    dxf: int = round(dxf_inner)
 
     return dxi, dxf
 
@@ -98,10 +87,7 @@ def find_board_range_y(board_right_section: np.ndarray) -> tuple[int, int]:
     y_counts: np.ndarray = edges.astype(bool, copy=True).sum(axis=1)
     print(y_counts)
 
-    h_half: int = h // 2
-    # dyi_inner: int = int(np.argmax(y_counts[:h_half]))
-    # dyf_inner: int = int(np.argmax(y_counts[h_half:])) + h_half
-    dyi_inner, dyf_inner = find_outer_bounds(y_counts)
+    dyi_inner, dyf_inner = _find_bounds_from_sums(y_counts)
 
     dy_inner: int = dyf_inner - dyi_inner
     hex_inner: float = 0 * dy_inner / 19
@@ -112,10 +98,56 @@ def find_board_range_y(board_right_section: np.ndarray) -> tuple[int, int]:
     return dyi, dyf
 
 
-def find_outer_bounds(axis_sums: np.ndarray) -> tuple[int, int]:
+def get_board_region_from_minigame_region(minigame_region: Region) -> Region:
+    """Returns the board region from the given minigame region."""
+    board_bottom_edge_region: Region = _get_board_bottom_edge_region(minigame_region=minigame_region)
+    board_right_edge_region: Region = _get_board_right_edge_region(minigame_region=minigame_region)
+
+    dxi, dxf = _get_edge_region_axis_bounds_relative(region=board_bottom_edge_region, axis_to_sum=0)
+    dyi, dyf = _get_edge_region_axis_bounds_relative(region=board_right_edge_region, axis_to_sum=1)
+
+    board_region: Region = minigame_region.crop_absolute(
+        rect=Rect(
+            x=board_bottom_edge_region.rect.x + dxi, y=board_right_edge_region.rect.y + dyi, w=dxf - dxi, h=dyf - dyi
+        )
+    )
+    return board_region
+
+
+def _get_board_right_edge_region(minigame_region: Region) -> Region:
+    """Returns the region of the board right edge."""
+    dxi: int = int(minigame_region.rect.w * 0.75)
+    dyf: int = int(minigame_region.rect.h * (15 / 16))
+    board_right_edge_region: Region = minigame_region.crop_relative(
+        rect=Rect(x=dxi, y=0, w=minigame_region.rect.w - dxi, h=dyf)
+    )
+    return board_right_edge_region
+
+
+def _get_board_bottom_edge_region(minigame_region: Region) -> Region:
+    """Returns the region of the board bottom edge."""
+    dxi: int = minigame_region.rect.w // 2
+    dyi: int = minigame_region.rect.h // 2
+    board_bottom_edge_region: Region = minigame_region.crop_relative(
+        rect=Rect(x=dxi, y=dyi, w=minigame_region.rect.w - dxi, h=minigame_region.rect.h - dyi)
+    )
+    return board_bottom_edge_region
+
+
+def _get_edge_region_axis_bounds_relative(region: Region, axis_to_sum: Literal[0, 1]) -> tuple[int, int]:
+    """Returns the edges of the given region along the given axis."""
+    img: np.ndarray = region.export()
+    gray: np.ndarray = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    blurred: np.ndarray = cv2.GaussianBlur(gray, (9, 9), 3.4)
+    edges: np.ndarray = cv2.Canny(blurred, 30, 150)
+    axis_sums: np.ndarray = edges.astype(bool, copy=True).sum(axis=axis_to_sum)
+    return _find_bounds_from_sums(axis_sums)
+
+
+def _find_bounds_from_sums(axis_sums: np.ndarray) -> tuple[int, int]:
     # Find all positions above a relative threshold
     max_val: int = np.max(axis_sums)
-    threshold: float = 0.3 * max_val
+    threshold: float = 0.4 * max_val
 
     significant_indices: np.ndarray = np.where(axis_sums >= threshold)[0]
 
@@ -127,43 +159,6 @@ def find_outer_bounds(axis_sums: np.ndarray) -> tuple[int, int]:
     right_bound = significant_indices[-1]
 
     return int(left_bound), int(right_bound)
-
-
-def crop_hexagonal_board(image: Union[Image, np.ndarray]) -> np.ndarray:
-    """Detect hexagonal board using separate X and Y range finding."""
-    if isinstance(image, Image):
-        img_array: np.ndarray = np.array(image)
-        img: np.ndarray = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-    else:
-        img: np.ndarray = image
-
-    # Convert PIL to OpenCV format
-    board_rect: Rect = get_board_rect(img)
-
-    cropped: np.ndarray = img[board_rect.y : board_rect.bottom, board_rect.x : board_rect.right]
-
-    return cropped
-
-
-def get_board_region_from_minigame_region(minigame_region: Region) -> Region:
-    """Returns the board region from the given minigame region."""
-    minigame_img: np.ndarray = minigame_region.export()
-
-    board_right_edge_region: Region = _get_board_right_edge_region(minigame_region=minigame_region)
-    board_bottom_edge_region: Region = _get_board_bottom_edge_region(minigame_region=minigame_region)
-
-
-def _get_board_right_edge_region(minigame_region: Region) -> Region:
-    """Returns the region of the board right edge."""
-    dxi: int = int(minigame_region.rect.w * 0.75)
-    board_right_edge_region: Region = minigame_region.crop_relative(
-        rect=Rect(x=dxi, y=0, w=minigame_region.rect.w - dxi, h=minigame_region.rect.h)
-    )
-    return board_right_edge_region
-
-
-def _get_board_bottom_edge_region(minigame_region: Region) -> Region:
-    pass
 
 
 def get_board_rect(image: Union[Image, np.ndarray]) -> Rect:
@@ -190,14 +185,3 @@ def get_board_rect(image: Union[Image, np.ndarray]) -> Rect:
     crop_w: int = min(w - crop_x, board_right - board_left)
     crop_h: int = min(h - crop_y, board_bottom - board_top)
     return Rect(crop_x, crop_y, crop_w, crop_h)
-
-
-if __name__ == "__main__":
-    # img: Image = screenshot_window_from_title("The Legend of Pirates Online [BETA]")
-    hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
-    if hwnd is None:
-        raise ValueError("No window found.")
-    client_region: Region = get_client_region(hwnd=hwnd)
-    minigame_region: Region = get_minigame_region_from_client_region(client_region=client_region)
-
-    fromarray(crop_hexagonal_board(minigame_region.export())).show()

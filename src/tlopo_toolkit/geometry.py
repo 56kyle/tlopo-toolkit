@@ -24,7 +24,7 @@ class Rect:
     w: int
     h: int
 
-    __slots__: ClassVar[list[str]] = ["x", "y", "w", "h"]
+    __slots__: ClassVar[list[str]] = ["h", "w", "x", "y"]
 
     @property
     def left(self):
@@ -58,7 +58,6 @@ class Region:
 
     def crop_relative(self, rect: Rect) -> Self:
         """Crops the internal region to itself."""
-
         return Region(
             img=self.img,
             rect=Rect(
@@ -379,7 +378,6 @@ def polygon_lines(layout: Layout, h: Hex) -> set[Point]:
 
     This is found by linearly interpolating the corners.
     """
-
     corners: list[Point] = polygon_corners(layout, h)
     lines: list[tuple[Point, Point]] = []
     for i in range(0, 6):

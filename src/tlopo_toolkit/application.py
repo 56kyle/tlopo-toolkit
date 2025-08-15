@@ -1,22 +1,28 @@
 """Application class with process and window management."""
+
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, ClassVar, Generator, Optional
+from typing import Any
+from typing import ClassVar
+from typing import Generator
+from typing import Optional
 
 import psutil
 from pywinctl._main import BaseWindow
 
 from tlopo_toolkit.exceptions import WindowNotFoundError
-from tlopo_toolkit.process import Executable, spawn_process, terminate_process
+from tlopo_toolkit.process import Executable
 from tlopo_toolkit.process import find_process
+from tlopo_toolkit.process import spawn_process
+from tlopo_toolkit.process import terminate_process
 from tlopo_toolkit.window import find_windows_for_process
 
 
 @dataclass(frozen=True)
 class Application:
     """Application instance with concrete process and window."""
+
     executable: ClassVar[Executable]
     process: psutil.Process
     window: BaseWindow
@@ -28,7 +34,7 @@ class Application:
         args: Optional[list[str]] = None,
         spawn_timeout: float = 10.0,
         force: bool = False,
-        terminate_timeout: float = 5.0
+        terminate_timeout: float = 5.0,
     ) -> Generator["Application", None, None]:
         """Context manager for application lifecycle."""
         app: "Application" = cls.spawn(args, spawn_timeout)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from typing_extensions import Self
 
 from tlopo_toolkit.geometry import Hex
@@ -11,6 +12,9 @@ class Piece:
 
     ingredient: Ingredient
     hex: Hex
+
+    def from_img(self) -> None:
+        """Classif."""
 
 
 @dataclass(frozen=True)
