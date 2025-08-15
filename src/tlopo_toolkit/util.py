@@ -18,7 +18,6 @@ from pywinctl import getAllWindows
 from pywinctl._main import BaseWindow
 
 from tlopo_toolkit.geometry import Rect
-from tlopo_toolkit.geometry import Region
 
 
 def get_window_from_pid(pid: int) -> BaseWindow:
@@ -181,9 +180,3 @@ def as_cv_img(img: Union[Image, np.ndarray]) -> np.ndarray:
         img_array: np.ndarray = np.array(img)
         return cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
     return img
-
-
-if __name__ == "__main__":
-    hwnd: int = find_window_by_title("The Legend of Pirates Online [BETA]")
-    board_region: Region = get_brewing_board_region(hwnd=hwnd)
-    board_region.show()
