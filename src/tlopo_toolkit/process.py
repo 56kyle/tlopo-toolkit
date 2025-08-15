@@ -31,6 +31,17 @@ def spawn_process(executable: Executable, args: Optional[list[str]] = None) -> p
         raise ProcessSpawnError(f"Failed to spawn: {e}") from e
 
 
+def find_process(executable: Executable) -> Optional[psutil.Process]:
+    """Find a process with the given executable path."""
+    for process in psutil.process_iter():
+        try:
+            if Path(process.exe()) == executable.path:
+                return process
+        except psutil.AccessDenied as e:
+            pass
+    return None
+
+
 def terminate_process(process: psutil.Process, force: bool = False, timeout: float = 5.0) -> None:
     """Terminate a process."""
     if not process.is_running():
@@ -52,9 +63,9 @@ def terminate_process(process: psutil.Process, force: bool = False, timeout: flo
 
 @contextmanager
 def managed_process(
-    executable: Executable, 
-    args: Optional[list[str]] = None, 
-    force: bool = False, 
+    executable: Executable,
+    args: Optional[list[str]] = None,
+    force: bool = False,
     timeout: float = 5.0
 ) -> Generator[psutil.Process, None, None]:
     """Context manager for process lifecycle."""

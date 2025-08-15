@@ -2,6 +2,7 @@
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, ClassVar, Generator, Optional
 
 import psutil
@@ -9,6 +10,7 @@ from pywinctl._main import BaseWindow
 
 from tlopo_toolkit.exceptions import WindowNotFoundError
 from tlopo_toolkit.process import Executable, spawn_process, terminate_process
+from tlopo_toolkit.process import find_process
 from tlopo_toolkit.window import find_windows_for_process
 
 
@@ -34,6 +36,16 @@ class Application:
             yield app
         finally:
             app.terminate(force, terminate_timeout)
+
+    @classmethod
+    def find(cls) -> Optional["Application"]:
+        """Finds a running instance of the application."""
+        found_process: Optional[psutil.Process] = find_process(cls.executable)
+        if found_process is None:
+            return None
+            # raise ValueError("No process found")
+        window: BaseWindow = cls._wait_for_window(found_process)
+        return cls(process=found_process, window=window)
 
     @classmethod
     def spawn(cls, args: Optional[list[str]] = None, timeout: float = 10.0) -> "Application":

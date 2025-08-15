@@ -32,3 +32,12 @@ class Ocean(BaseModel):
     invasion: Invasion
     fleet: Fleet
     is_low_latency: int = Field(alias="isLowLatency")
+
+
+class LoginResponse(BaseModel):
+    """Schema representing a single Login in the TLOPO Ocean API."""
+    status: int
+    message: str
+    token: str
+    gameserver: str
+    dist: str
