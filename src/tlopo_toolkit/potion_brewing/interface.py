@@ -10,7 +10,7 @@ from PIL.Image import Image
 from tlopo_toolkit.geometry import Rect
 from tlopo_toolkit.util import as_cv_img
 from tlopo_toolkit.util import find_window_by_title
-from tlopo_toolkit.util import screenshot_window
+from tlopo_toolkit.util import screenshot_client
 
 
 PIECE_WINDOW_WIDTH_RATIO: float = 91 / 1936
@@ -21,7 +21,7 @@ PLAY_AREA_OFFSET_RATIO_OF_HALF: float = 66 / 678
 
 def get_minigame_img(hwnd: int) -> np.ndarray:
     """Returns an image of the game area."""
-    img: Optional[Image] = screenshot_window(hwnd=hwnd)
+    img: Optional[Image] = screenshot_client(hwnd=hwnd)
     if img is None:
         raise ValueError("No image found.")
     img_arr: np.ndarray = np.array(img)

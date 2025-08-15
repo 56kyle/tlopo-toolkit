@@ -24,15 +24,12 @@ from tlopo_toolkit.geometry import OffsetCoord
 from tlopo_toolkit.geometry import Point
 from tlopo_toolkit.geometry import Rect
 
-from tlopo_toolkit.geometry import polygon_corners
 from tlopo_toolkit.geometry import polygon_lines
 from tlopo_toolkit.geometry import qoffset_to_cube
-from tlopo_toolkit.geometry import roffset_to_cube
 from tlopo_toolkit.potion_brewing.interface import get_board_rect
 from tlopo_toolkit.potion_brewing.interface import get_minigame_img
 from tlopo_toolkit.util import as_cv_img
 from tlopo_toolkit.util import find_window_by_title
-from tlopo_toolkit.util import get_client_rect
 
 
 def get_contour_bounding_box(contour: np.ndarray) -> Rect:
