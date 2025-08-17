@@ -9,7 +9,7 @@ import win32gui
 from tlopo_toolkit.util import find_window_by_title
 
 
-def mouse_move(hwnd: int, x: Union[int, float], y: Union[int, float]) -> None:
+def mouse_move(hwnd: int, x: Union[int, float], y: Union[int, float], steps: int = 1) -> None:
     """Moves the mouse to the given coordinates."""
     x: int = int(x)
     y: int = int(y)
@@ -17,18 +17,19 @@ def mouse_move(hwnd: int, x: Union[int, float], y: Union[int, float]) -> None:
     if win32gui.GetForegroundWindow() == hwnd:
         win32api.SetCursorPos((x, y))
     else:
-        l_param = win32api.MAKELONG(x, y)
-        win32gui.SendMessage(hwnd, win32con.WM_MOUSEMOVE, 0, l_param)
-        win32gui.SendMessage(hwnd, win32con.WM_MOUSEHOVER, 0, l_param)
-        win32gui.SendMessage(hwnd, win32con.WM_MBUTTONDOWN, win32con.MK_MBUTTON, l_param)
-        win32gui.SendMessage(hwnd, win32con.WM_MBUTTONUP, None, l_param)
+        for i in range(steps):
+            l_param = win32api.MAKELONG(x, y)
+            win32gui.SendMessage(hwnd, win32con.WM_MOUSEMOVE, 0, l_param)
+            win32gui.SendMessage(hwnd, win32con.WM_MOUSEHOVER, 0, l_param)
+            win32gui.SendMessage(hwnd, win32con.WM_MBUTTONDOWN, win32con.MK_MBUTTON, l_param)
+            win32gui.SendMessage(hwnd, win32con.WM_MBUTTONUP, None, l_param)
 
 
-def mouse_click(hwnd: int, x: Union[int, float], y: Union[int, float]) -> None:
+def mouse_click(hwnd: int, x: Union[int, float], y: Union[int, float], steps: int = 1) -> None:
     """Clicks the mouse at the given coordinates."""
     x: int = int(x)
     y: int = int(y)
-    mouse_move(hwnd=hwnd, x=x, y=y)
+    mouse_move(hwnd=hwnd, x=x, y=y, steps=steps)
     l_param = win32api.MAKELONG(x, y)
     win32gui.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, l_param)
     win32gui.SendMessage(hwnd, win32con.WM_LBUTTONUP, None, l_param)
