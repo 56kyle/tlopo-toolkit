@@ -2,6 +2,7 @@
 
 import math
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Literal
 from typing import Optional
 from typing import Union
@@ -14,7 +15,6 @@ from shapely import Point
 from typing_extensions import Self
 
 from tlopo_toolkit._mouse import mouse_click
-from tlopo_toolkit._mouse import mouse_move
 from tlopo_toolkit.geometry import ORIENTATION_FLAT
 from tlopo_toolkit.geometry import Hex
 from tlopo_toolkit.geometry import Layout
@@ -22,8 +22,10 @@ from tlopo_toolkit.geometry import OffsetCoord
 from tlopo_toolkit.geometry import Rect
 from tlopo_toolkit.geometry import Region
 from tlopo_toolkit.geometry import hex_to_pixel
+from tlopo_toolkit.geometry import polygon_corners
 from tlopo_toolkit.geometry import polygon_lines
 from tlopo_toolkit.geometry import qoffset_to_cube
+from tlopo_toolkit.potion_brewing.ingredient import get_ingredient_level_from_corner_colors
 from tlopo_toolkit.potion_brewing.interface import get_board_rect
 from tlopo_toolkit.potion_brewing.interface import get_board_region_from_minigame_region
 from tlopo_toolkit.potion_brewing.interface import get_client_region
@@ -54,21 +56,43 @@ def get_contours(img: np.ndarray):
 class Board:
     """Class representing the potion brewing minigame's board geometry."""
 
-    layout: Layout
+    client_layout: Layout
     q_offset: Literal[-1, 1]
     grid: Union[
         np.ndarray[tuple[Literal[10], Literal[8]], Hex], np.ndarray[tuple[Literal[10], Literal[8]], np.dtype[Hex]]
     ]
 
+    @cached_property
+    def placement_columns(self) -> list[Point]:
+        """Returns the columns of the board that can be placed."""
+        columns: list[Point] = []
+        for col in range(self.grid.shape[1] - 1):
+            point: Point = self.get_hex_point(y=0, x=col)
+            point_next: Point = self.get_hex_point(y=0, x=col + 1)
+            columns.append(Point((point.x + point_next.x) / 2, point.y))
+        return columns
+
     def to_screen_relative(self) -> Self:
         """Returns a copy of the board with screen-relative coordinates."""
-        origin: Point = Point(win32gui.ClientToScreen(hwnd, (int(self.layout.origin.x), int(self.layout.origin.y))))
-        layout: Layout = Layout(orientation=self.layout.orientation, size=self.layout.size, origin=origin)
-        return Board(layout=layout, q_offset=self.q_offset, grid=self.grid)
+        origin: Point = Point(
+            win32gui.ClientToScreen(hwnd, (int(self.client_layout.origin.x), int(self.client_layout.origin.y)))
+        )
+        layout: Layout = Layout(orientation=self.client_layout.orientation, size=self.client_layout.size, origin=origin)
+        return Board(client_layout=layout, q_offset=self.q_offset, grid=self.grid)
 
     def get_hex_point(self, y: int, x: int) -> Point:
         """Returns the hex at the given coordinates."""
-        return hex_to_pixel(self.layout, self.grid[y, x])
+        return hex_to_pixel(self.client_layout, self.grid[y, x])
+
+    def get_hex(self, y: int, x: int) -> Optional[Hex]:
+        """Returns the piece at the given coordinates."""
+        return self.grid[y, x]
+
+    def get_hex_ingredient(self, y: int, x: int) -> Optional[Hex]:
+        """Returns the ingredient at the given coordinates."""
+        hex: Hex = self.get_hex(y=y, x=x)
+        corners: list[Point] = polygon_corners(self.client_layout, hex)
+        return get_ingredient_level_from_corner_colors()
 
 
 def get_screen_board_from_window(hwnd: int) -> Board:
@@ -86,15 +110,15 @@ def get_client_board_from_window(hwnd: int) -> Board:
 
 
 def get_board_from_bounds(rect: Rect) -> Board:
-    """Returns the potion brewing minigame's board geometry from the given layout."""
+    """Returns the potion brewing minigame's board geometry from the given client_layout."""
     layout: Layout = get_layout_from_client_rect(rect=rect)
     hex_grid: np.ndarray[tuple[10, 8], np.dtype[Hex]] = build_hex_grid()
 
-    return Board(layout=layout, q_offset=-1, grid=hex_grid)
+    return Board(client_layout=layout, q_offset=-1, grid=hex_grid)
 
 
 def get_layout_from_client_rect(rect: Rect) -> Layout:
-    """Returns the potion brewing minigame's board layout from the given bounds."""
+    """Returns the potion brewing minigame's board client_layout from the given bounds."""
     x_hex_size: float = rect.w / 12.5
     y_hex_size: float = (rect.h / 10.5) / math.sqrt(3)
     print(f"{x_hex_size=}, {y_hex_size=}")
@@ -135,7 +159,7 @@ def get_and_display_board() -> None:
             offset: OffsetCoord = OffsetCoord(col=x, row=y)
             print(f"{x=}, {y=}")
             h: Hex = qoffset_to_cube(-1, offset)
-            for point in polygon_lines(board.layout, h):
+            for point in polygon_lines(board.client_layout, h):
                 img[int(point.y), int(point.x), :] = [0, 255, 0]
     fromarray(img).show()
 
@@ -145,12 +169,9 @@ if __name__ == "__main__":
     hwnd: Optional[int] = find_window_by_title("The Legend of Pirates Online [BETA]")
     client_board: Board = get_client_board_from_window(hwnd=hwnd)
     screen_board: Board = client_board.to_screen_relative()
-    left_point: Point = hex_to_pixel(layout=screen_board.layout, h=screen_board.grid[0, 0])
-    right_point: Point = hex_to_pixel(layout=screen_board.layout, h=screen_board.grid[0, 7])
+    left_point: Point = hex_to_pixel(layout=screen_board.client_layout, h=screen_board.grid[0, 0])
+    right_point: Point = hex_to_pixel(layout=screen_board.client_layout, h=screen_board.grid[0, 7])
     midpoint: Point = Point((left_point.x + right_point.x) / 2, left_point.y)
-    mouse_move(hwnd=hwnd, x=midpoint.x, y=midpoint.y)
-
-    for i in range(int(midpoint.x), int(right_point.x), 250):
-        mouse_move(hwnd=hwnd, x=i, y=midpoint.y)
-        print(i)
-    mouse_click(hwnd=hwnd, x=right_point.x, y=midpoint.y)
+    # mouse_move(hwnd=hwnd, x=midpoint.x, y=midpoint.y)
+    for point in client_board.placement_columns:
+        mouse_click(hwnd=hwnd, x=point.x, y=midpoint.y, steps=4)
