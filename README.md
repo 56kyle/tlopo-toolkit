@@ -8,6 +8,15 @@ tlopo_toolkit
 
 ---
 
+# WIP
+
+This is a very, very casual project and by no means should anything of value depend on it for the time being.
+
+Stuff will change, break, and rebreak routinely, although if it does become stable I will indicate it as such.
+As a side note, please don't use this to abuse TLOPO. I love the game and have used this as a way to reexperience parts
+of it. If you have found yourself wanting to limit test things, I invite you to do so, but please do so with discretion
+so that you don't affect others while doing so.
+
 ## Installation
 
 You can install `tlopo_toolkit` via [pip](pip-documentation) from PyPI:
